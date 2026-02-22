@@ -120,6 +120,11 @@
 }
 
 @layer base {
+
+  html{
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -166,4 +171,12 @@ button {
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #262626 transparent;
+}
+
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.animate-gradient-x {
+  animation: gradient-x 5s linear infinite;
 }
