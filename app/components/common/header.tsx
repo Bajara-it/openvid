@@ -31,7 +31,7 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <Image src="/svg/logo-freeshot.svg" alt="Logo" width={50} height={50} />
-          <span className="hidden sm:flex text-white font-semibold text-lg tracking-wider transition-colors group-hover:text-neutral-200">
+          <span className="hidden sm:flex text-white font-semibold text-lg transition-colors group-hover:text-neutral-200">
             Free
             <span className="relative inline-block px-1 ml-0.5">
               <span className="absolute inset-0 bg-blue-500/20 border border-dashed border-blue-400/50 rounded-sm -rotate-1" />
@@ -43,7 +43,7 @@ export default function Header() {
           </span>
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
-          <a href="#features" className="hover:text-white transition-colors">Documentación</a>
+          <a href="#docs" className="hover:text-white transition-colors">Documentación</a>
           <a href="#workflow" className="hover:text-white transition-colors">Workflow</a>
           <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
         </div>
