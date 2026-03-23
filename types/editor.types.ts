@@ -65,6 +65,7 @@ export interface VideoCanvasProps {
     selectedWallpaper?: number;
     backgroundBlur?: number;
     selectedImageUrl?: string;
+    unsplashOverrideUrl?: string; // URL de imagen Unsplash seleccionada desde el tab wallpaper
     backgroundColorCss?: string; // CSS string para color/gradiente personalizado
     onTimeUpdate: () => void;
     onLoadedMetadata: () => void;

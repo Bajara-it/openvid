@@ -60,7 +60,6 @@ export function ZoomFragmentEditor({
         window.addEventListener("pointerup", up);
     };
 
-    // Handle click to set focus point instantly
     const handlePreviewClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if ((e.target as HTMLElement).closest('[data-drag-handle]')) return;
         if (!focusPreviewRef.current) return;
@@ -74,7 +73,6 @@ export function ZoomFragmentEditor({
 
     return (
         <div className="flex flex-col h-full text-white">
-            {/* Header with back button */}
             <div className="flex items-center gap-2 p-3 border-b border-white/6 shrink-0">
                 <button
                     onClick={onBack}
@@ -104,14 +102,12 @@ export function ZoomFragmentEditor({
                             {Math.round(fragment.focusX)}% · {Math.round(fragment.focusY)}%
                         </span>
                     </div>
-                    {/* Video preview with draggable focus point using Framer Motion */}
                     <div
                         ref={focusPreviewRef}
                         className="relative w-full squircle-element overflow-hidden bg-[#0a0a0e] border border-white/10"
                         style={{ aspectRatio: videoDimensions ? `${videoDimensions.width}/${videoDimensions.height}` : "16/9" }}
                         onClick={handlePreviewClick}
                     >
-                        {/* Dynamic thumbnail - shows full video at current playback time */}
                         {dynamicThumbnail ? (
                             <img
                                 src={dynamicThumbnail}
@@ -126,7 +122,6 @@ export function ZoomFragmentEditor({
                             />
                         ) : null}
 
-                        {/* Zoom area preview */}
                         <div
                             className="absolute border border-dashed border-blue-500/50 bg-gradient-to-b from-blue-500/30 to-transparent squircle-element pointer-events-none"
                             style={{

@@ -136,13 +136,35 @@
 
 @layer components {
   .glass-border {
-     background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.4));
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.4));
     border-top: 0.75px solid rgba(255, 255, 255, 0.8);
     border-left: 0.75px solid rgba(255, 255, 255, 0.8);
     padding: 7px;
   }
-}
 
+  @keyframes text-shimmer {
+    0% {
+      background-position: 100% center;
+    }
+
+    100% {
+      background-position: -100% center;
+    }
+  }
+
+  .shimmer-text {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        rgba(255, 255, 255, 1) 50%,
+        rgba(255, 255, 255, 0.25) 100%);
+    background-size: 200% auto;
+    color: transparent !important;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: text-shimmer 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  }
+}
 
 button {
   cursor: pointer;

@@ -1,8 +1,5 @@
 import { AspectRatio } from "@/types/editor.types";
 import { zoomLevelToFactor, speedToTransitionMs, easeOutQuart, ZoomStateCanvas, ZoomFragment } from "@/types/zoom.types";
-/**
- * Dibuja un rectángulo con esquinas redondeadas en el contexto del canvas
- */
 export function drawRoundedRect(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -24,9 +21,6 @@ export function drawRoundedRect(
     ctx.closePath();
 }
 
-/**
- * Dibuja un rectángulo con esquinas redondeadas solo en la parte inferior
- */
 export function drawRoundedRectBottomOnly(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -45,9 +39,6 @@ export function drawRoundedRectBottomOnly(
     ctx.closePath();
 }
 
-/**
- * Calcula el padding escalado basado en tamaño de contenedor y porcentaje
- */
 export function calculateScaledPadding(
     containerSize: number,
     paddingPercent: number
@@ -55,10 +46,7 @@ export function calculateScaledPadding(
     return paddingPercent * containerSize;
 }
 
-
-// Función para obtener aspect ratio CSS string
 export function getAspectRatioStyle(ratio: AspectRatio, customDimensions?: { width: number; height: number }): string {
-    // Use custom dimensions for both "custom" and "auto" modes
     if ((ratio === "custom" || ratio === "auto") && customDimensions) {
         return `${customDimensions.width}/${customDimensions.height}`;
     }
@@ -75,7 +63,6 @@ export function getAspectRatioStyle(ratio: AspectRatio, customDimensions?: { wid
 
 // Función para obtener max-width basado en aspect ratio
 export function getMaxWidth(ratio: AspectRatio, customDimensions?: { width: number; height: number }): string {
-    // Use custom dimensions for both "custom" and "auto" modes
     if ((ratio === "custom" || ratio === "auto") && customDimensions) {
         const aspectValue = customDimensions.width / customDimensions.height;
         if (aspectValue > 1.5) return "52rem"; // Landscape
@@ -93,9 +80,6 @@ export function getMaxWidth(ratio: AspectRatio, customDimensions?: { width: numb
     }
 }
 
-/**
- * Calcula propiedades escaladas para el canvas de exportación
- */
 export function calculateScaledProperties(
     padding: number,
     roundedCorners: number,
@@ -117,13 +101,6 @@ export function calculateScaledProperties(
     };
 }
 
-/**
- * Aplica un fondo CSS (color sólido o gradiente) a un canvas
- * @param ctx Contexto del canvas
- * @param cssBackground String CSS de background (ej: "#ff0000" o "linear-gradient(...)")
- * @param width Ancho del área a llenar
- * @param height Altura del área a llenar
- */
 export function applyCanvasBackground(
     ctx: CanvasRenderingContext2D,
     cssBackground: string,
@@ -279,7 +256,6 @@ export function calculateSmoothZoom(
         const timeSinceEnd = frameTime - previousFragment.endTime;
 
         if (timeSinceEnd < exitTransitionSec) {
-            // Exit transition - ease out from the zoom (mirror of entry for symmetry)
             const progress = Math.min(1, timeSinceEnd / exitTransitionSec);
             const easedProgress = easeOutQuart(progress); // Same easing as entry for professional feel
             const targetScale = zoomLevelToFactor(previousFragment.zoomLevel);
@@ -293,6 +269,5 @@ export function calculateSmoothZoom(
         }
     }
 
-    // Default - no zoom active
     return DEFAULT_STATE;
 }

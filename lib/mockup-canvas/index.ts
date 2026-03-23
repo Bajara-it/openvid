@@ -1,7 +1,3 @@
-/**
- * Exportaciones principales para el renderizado de mockups en Canvas
- */
-
 export * from './types';
 export * from './shared';
 export { drawMacosMockup } from './macos';

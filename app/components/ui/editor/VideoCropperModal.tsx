@@ -44,7 +44,6 @@ export function VideoCropperModal({
     const dragStartPos = useRef({ x: 0, y: 0 });
     const initialCropRef = useRef<CropArea>({ x: 0, y: 0, width: 100, height: 100 });
 
-    // Resetear cuando se abre el modal (detectando transición de cerrado a abierto)
     if (isOpen && !wasOpen) {
         setCropArea(initialCrop ?? { x: 0, y: 0, width: 100, height: 100 });
         setSelectedAspectRatio(null);
@@ -53,7 +52,6 @@ export function VideoCropperModal({
         setWasOpen(false);
     }
 
-    // Obtener dimensiones del video
     const handleVideoLoad = useCallback(() => {
         if (videoRef.current) {
             setVideoDimensions({
@@ -69,25 +67,20 @@ export function VideoCropperModal({
 
         if (ratio === null || videoDimensions.width === 0) return;
 
-        // Calcular el nuevo tamaño manteniendo el aspect ratio
         const videoAspect = videoDimensions.width / videoDimensions.height;
         const targetAspect = ratio;
 
         let newWidth: number;
         let newHeight: number;
 
-        // Calcular tamaño máximo que cabe en el video
         if (targetAspect > videoAspect) {
-            // El crop es más ancho que el video, limitamos por ancho
             newWidth = 100;
             newHeight = (100 * videoAspect) / targetAspect;
         } else {
-            // El crop es más alto que el video, limitamos por alto
             newHeight = 100;
             newWidth = (100 * targetAspect) / videoAspect;
         }
 
-        // Centrar el crop
         const newX = (100 - newWidth) / 2;
         const newY = (100 - newHeight) / 2;
 
@@ -199,7 +192,6 @@ export function VideoCropperModal({
                     }
                 }
 
-                // Asegurar límites
                 newCrop.x = Math.max(0, Math.min(100 - minSize, newCrop.x));
                 newCrop.y = Math.max(0, Math.min(100 - minSize, newCrop.y));
                 newCrop.width = Math.max(minSize, Math.min(100 - newCrop.x, newCrop.width));
@@ -251,7 +243,6 @@ export function VideoCropperModal({
                     transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     className="bg-[#0a0a0b] rounded-2xl border border-white/10 w-[92vw] max-w-5xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl"
                 >
-                    {/* ── Header ── */}
                     <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
                         <div className="flex items-center gap-2.5">
                             <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center">
@@ -259,7 +250,7 @@ export function VideoCropperModal({
                             </div>
                             <span className="text-sm font-medium text-white">Recortar video</span>
                             {videoDimensions.width > 0 && (
-                                <span className="text-[11px] font-mono text-white/60 bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/10">
+                                <span className="text-[11px] font-mono text-white/60 bg-white/4 px-2 py-0.5 rounded-md border border-white/10">
                                     {videoDimensions.width} × {videoDimensions.height}
                                 </span>
                             )}
@@ -272,10 +263,8 @@ export function VideoCropperModal({
                         </button>
                     </div>
 
-                    {/* ── Body ── */}
                     <div className="flex-1 flex overflow-hidden min-h-0">
 
-                        {/* Video canvas */}
                         <div className="flex-1 p-6 flex items-center justify-center bg-black/50 overflow-hidden">
                             <div
                                 ref={containerRef}
@@ -302,12 +291,11 @@ export function VideoCropperModal({
                                             muted loop autoPlay
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 bg-white/[0.02] rounded-lg flex items-center justify-center text-white/20 text-sm">
+                                        <div className="absolute inset-0 bg-white/3 rounded-lg flex items-center justify-center text-white/20 text-sm">
                                             Sin video
                                         </div>
                                     )}
 
-                                    {/* Dark overlay outside crop */}
                                     <div className="absolute inset-0 pointer-events-none">
                                         <div className="absolute bg-black/75 left-0 right-0 top-0" style={{ height: `${cropArea.y}%` }} />
                                         <div className="absolute bg-black/75 left-0 right-0 bottom-0" style={{ height: `${Math.max(0, 100 - cropArea.y - cropArea.height)}%` }} />
@@ -315,7 +303,6 @@ export function VideoCropperModal({
                                         <div className="absolute bg-black/75 right-0" style={{ top: `${cropArea.y}%`, width: `${Math.max(0, 100 - cropArea.x - cropArea.width)}%`, height: `${cropArea.height}%` }} />
                                     </div>
 
-                                    {/* Crop selection box */}
                                     <div
                                         className="absolute border border-white/80 cursor-move"
                                         style={{
@@ -326,21 +313,18 @@ export function VideoCropperModal({
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, "move")}
                                     >
-                                        {/* Rule-of-thirds grid */}
                                         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
                                             {[...Array(9)].map((_, i) => (
-                                                <div key={i} className="border border-white/[0.15]" />
+                                                <div key={i} className="border border-white/15" />
                                             ))}
                                         </div>
 
-                                        {/* Dimension badge — centered top */}
                                         {videoDimensions.width > 0 && (
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm border border-white/[0.12] text-white/60 text-[10px] font-mono px-2 py-0.5 rounded-md whitespace-nowrap pointer-events-none">
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm border border-white/12 text-white/60 text-[10px] font-mono px-2 py-0.5 rounded-md whitespace-nowrap pointer-events-none">
                                                 {Math.round((videoDimensions.width * cropArea.width) / 100)} × {Math.round((videoDimensions.height * cropArea.height) / 100)}
                                             </div>
                                         )}
 
-                                        {/* Corner handles */}
                                         {["nw", "ne", "sw", "se"].map((handle) => {
                                             const positions: Record<string, string> = {
                                                 nw: "-top-1.5 -left-1.5 cursor-nwse-resize",
@@ -357,7 +341,6 @@ export function VideoCropperModal({
                                             );
                                         })}
 
-                                        {/* Edge handles */}
                                         {["n", "s", "w", "e"].map((handle) => {
                                             const isVertical = handle === "n" || handle === "s";
                                             const positions: Record<string, string> = {
@@ -380,10 +363,8 @@ export function VideoCropperModal({
                             </div>
                         </div>
 
-                        {/* ── Right sidebar ── */}
                         <div className="w-56 shrink-0 border-l border-white/10 flex flex-col bg-[#0d0d0f]">
 
-                            {/* Aspect ratio */}
                             <div className="p-4 border-b border-white/10">
                                 <p className="text-[10px] uppercase tracking-widest font-semibold text-white/60 mb-3">Proporción</p>
                                 <div className="grid grid-cols-3 gap-1">
@@ -393,7 +374,7 @@ export function VideoCropperModal({
                                                 onClick={() => handleAspectRatioSelect(ratio.value)}
                                                 className={`w-full py-1.5 text-[11px] font-medium rounded-lg transition-all ${selectedAspectRatio === ratio.value
                                                     ? "text-white border-transparent"
-                                                    : "bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white/70 border border-white/10"
+                                                    : "bg-white/4 text-white/40 hover:bg-white/8 hover:text-white/70 border border-white/10"
                                                     }`}
                                                 style={
                                                     selectedAspectRatio === ratio.value
@@ -414,7 +395,6 @@ export function VideoCropperModal({
                                 </div>
                             </div>
 
-                            {/* Crop coordinates */}
                             <div className="p-4 border-b border-white/10">
                                 <p className="text-[10px] uppercase tracking-widest font-semibold text-white/60 mb-3">Área</p>
                                 <div className="space-y-2">
@@ -426,7 +406,7 @@ export function VideoCropperModal({
                                     ].map(({ label, value }) => (
                                         <div key={label} className="flex items-center justify-between">
                                             <span className="text-[11px] text-white/25 font-mono w-4">{label}</span>
-                                            <div className="flex-1 mx-3 h-px bg-white/[0.04]" />
+                                            <div className="flex-1 mx-3 h-px bg-white/4" />
                                             <span className="text-[11px] font-mono text-white/50">{value.toFixed(1)}%</span>
                                         </div>
                                     ))}

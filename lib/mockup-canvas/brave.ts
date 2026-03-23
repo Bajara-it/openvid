@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de Brave en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import {
@@ -41,10 +37,8 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     const textColor   = isDark ? "#cccccc" : "#555555";
     const iconColor   = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)";
 
-    // 0. Sombra
     drawMockupShadow(ctx, x, y, width, height, cornerRadius, shadowBlur);
 
-    // 1. Fondo contenido
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x, y + headerHeight);
@@ -58,7 +52,6 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     ctx.fill();
     ctx.restore();
 
-    // 2. Header
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x + cornerRadius, y);
@@ -73,7 +66,6 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     ctx.fill();
     ctx.restore();
 
-    // 3. Línea separadora
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -86,7 +78,6 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     const smallIcon = iconSize * 0.75;
     const smallIconY = y + (headerHeight - smallIcon) / 2;
 
-    // ── LEFT: chevron-left, chevron-right (dimmed), refresh ──
     let curX = x + leftPadding;
 
     drawChevronLeft(ctx, curX, smallIconY, smallIcon, iconColor + "59");
@@ -97,7 +88,6 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
 
     drawRefreshIcon(ctx, curX, smallIconY, smallIcon, iconColor);
 
-    // ── CENTER: URL bar (lock + url + star) ──
     const urlBarWidth = Math.min(width * 0.45, 576 * headerScale);
     const urlBarX = x + (width - urlBarWidth) / 2;
     const urlBarY = y + (headerHeight - urlBarHeight) / 2;
@@ -120,14 +110,11 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     ctx.fillText(url.replace(/^https?:\/\//, "").substring(0, 40), urlBarX + urlBarWidth / 2, urlBarY + urlBarHeight / 2);
     ctx.restore();
 
-    // Star icon (right of URL bar) — drawn manually as polygon
     const starSize = iconSize * 0.75;
     const starX = urlBarX + urlBarWidth - urlBarPadding - starSize;
     const starY = urlBarY + (urlBarHeight - starSize) / 2;
     drawStarIcon(ctx, starX, starY, starSize, "rgba(234,179,8,0.8)");
 
-    // ── RIGHT: download + three-dots + Windows buttons ──
-    // Windows buttons are rightmost — calculate from right edge
     const winBtnsWidth = winBtnW * 3;
     const dotsIconX = x + width - winBtnsWidth - rightGap - smallIcon;
     const downloadIconX = dotsIconX - rightGap - smallIcon;
@@ -135,7 +122,6 @@ export function drawBraveMockup(context: MockupCanvasContext): MockupDrawResult 
     drawDownloadIcon(ctx, downloadIconX, smallIconY, smallIcon, iconColor);
     drawThreeDotsIcon(ctx, dotsIconX, smallIconY, smallIcon, iconColor);
 
-    // Windows buttons: minimize, maximize, close
     const winY = y;
     const winBtnH = headerHeight;
     drawWinButton(ctx, x + width - winBtnW * 3, winY, winBtnW, winBtnH, "minimize", iconColor, headerScale);

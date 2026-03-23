@@ -1,7 +1,3 @@
-/**
- * Tipos compartidos para el renderizado de mockups en Canvas
- */
-
 import type { MockupConfig } from "@/types/mockup.types";
 
 export interface MockupCanvasContext {

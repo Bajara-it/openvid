@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de Browser Tab Glass en Canvas
- */
-
 import type { MockupCanvasContext, MockupDrawResult } from "./types";
 import { drawRoundedRectPath, drawMockupShadow } from "./shared";
 
@@ -16,7 +12,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     const glassCornerRadius = cornerRadius;
     const innerCornerRadius = Math.max(0, glassCornerRadius + 4);
 
-    // Tab bar dimensions — igual que el React
     const tabBarH      = 32  * headerScale;  // increased for top padding
     const dotSize      = 10  * headerScale;
     const dotGap       = 6   * headerScale;
@@ -36,23 +31,19 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
 
     const bgColor = isDark ? "#262626" : "#f9f9f9";
 
-    // Dark/light tab styles — igual que el React
     const tabBg          = isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.8)";
     const tabBorderColor = isDark ? "rgba(255,255,255,0.2)"  : "rgba(255,255,255,0.9)";
     const tabTitleColor  = isDark ? "#d1d5db"                : "#374151";
     const tabCloseColor  = isDark ? "rgba(209,213,219,0.6)"  : "rgba(75,85,99,0.8)";
     const tabCloseBg     = isDark ? "rgba(255,255,255,0.1)"  : "rgba(156,163,175,0.2)";
 
-    // 0. Sombra exterior
     drawMockupShadow(ctx, x, y, width, height, glassCornerRadius, shadowBlur);
 
-    // 1. Área interior
     const innerX      = x + glassPadding;
     const innerY      = y + glassPadding;
     const innerWidth  = width  - glassPadding * 2;
     const innerHeight = height - glassPadding * 2;
 
-    // 2. Cáscara glass
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, glassCornerRadius);
     const grad = ctx.createLinearGradient(x, y + height, x + width, y);
@@ -72,19 +63,14 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.stroke();
     ctx.restore();
 
-    // 3. Clip al área interior
     ctx.save();
     drawRoundedRectPath(ctx, innerX, innerY, innerWidth, innerHeight, innerCornerRadius);
     ctx.clip();
 
-    // 4. Fondo contenido (debajo del tab bar)
     ctx.fillStyle = bgColor;
     ctx.fillRect(innerX, innerY + tabBarH, innerWidth, innerHeight - tabBarH);
 
-    // ── TAB BAR ──
-    // El tab bar no tiene fondo propio (transparente sobre el glass)
 
-    // 5. Window dots (bottom-aligned, left side)
     const dotBaseY  = innerY + (tabBarH - dotSize) / 2;
     const dotStartX = innerX + leftPadding + dotPaddingX;
     [0, 1, 2].forEach((i) => {
@@ -101,36 +87,30 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
         ctx.restore();
     });
 
-    // 6. Active tab (bottom-aligned, after dots)
     const dotsBlockW = dotPaddingX + 3 * dotSize + 2 * dotGap;
     const tabX = innerX + leftPadding + dotsBlockW + dotsTabGap;
     const tabY = innerY + tabBarH - tabH + 2 * headerScale;
 
     ctx.save();
-    // Tab background with top+left+right border
     drawRoundedRectPath(ctx, tabX, tabY, tabW, tabH, 8 * headerScale);
     ctx.fillStyle = tabBg;
     ctx.fill();
-    // Top border
     ctx.strokeStyle = tabBorderColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(tabX + 8 * headerScale, tabY);
     ctx.lineTo(tabX + tabW - 8 * headerScale, tabY);
     ctx.stroke();
-    // Left border
     ctx.beginPath();
     ctx.moveTo(tabX, tabY + 8 * headerScale);
     ctx.lineTo(tabX, tabY + tabH);
     ctx.stroke();
-    // Right border
     ctx.beginPath();
     ctx.moveTo(tabX + tabW, tabY + 8 * headerScale);
     ctx.lineTo(tabX + tabW, tabY + tabH);
     ctx.stroke();
     ctx.restore();
 
-    // Favicon dot (blue circle)
     const faviconX = tabX + tabPaddingX + tabIconSize / 2;
     const faviconY = tabY + tabH / 2;
     ctx.save();
@@ -140,7 +120,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.fill();
     ctx.restore();
 
-    // Tab title
     ctx.save();
     ctx.font = `500 ${tabFontSize}px "Inter", -apple-system, BlinkMacSystemFont, sans-serif`;
     ctx.fillStyle = tabTitleColor;
@@ -156,7 +135,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.restore();
     ctx.restore();
 
-    // Close X button
     const closeSize = 8 * headerScale;
     const closeX    = tabX + tabW - tabPaddingX - closeSize;
     const closeY    = tabY + (tabH - closeSize) / 2;
@@ -165,7 +143,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.arc(closeX + closeSize / 2, closeY + closeSize / 2, closeSize / 2, 0, Math.PI * 2);
     ctx.fillStyle = tabCloseBg;
     ctx.fill();
-    // X lines
     ctx.strokeStyle = tabCloseColor;
     ctx.lineWidth = 1 * headerScale;
     ctx.beginPath();
@@ -176,7 +153,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.stroke();
     ctx.restore();
 
-    // 7. Add tab button (+)
     const addBtnX = tabX + tabW + tabAddGap;
     const addBtnY = innerY + (tabBarH - addBtnSize) / 2;
     ctx.save();
@@ -187,7 +163,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.strokeStyle = "rgba(255,255,255,0.3)";
     ctx.lineWidth = 1;
     ctx.stroke();
-    // + symbol
     const plusS = 10 * headerScale;
     const plusCX = addBtnX + addBtnSize / 2;
     const plusCY = addBtnY + addBtnSize / 2;
@@ -202,15 +177,12 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.stroke();
     ctx.restore();
 
-    // 8. Windows-style buttons (right side, bottom-aligned)
     const winBaseY = innerY + tabBarH / 2;
     const winRightX = innerX + innerWidth - winIconMR;
 
-    // Close X
     const wCloseSize = 12 * headerScale;
     drawWinX(ctx, winRightX - wCloseSize, winBaseY - wCloseSize / 2, wCloseSize, "rgba(255,255,255,0.5)", headerScale);
 
-    // Maximize (border box)
     const wMaxSize = 9 * headerScale;
     const wMaxX = winRightX - wCloseSize - winIconGap - wMaxSize;
     const wMaxY = winBaseY - wMaxSize / 2;
@@ -220,7 +192,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.strokeRect(wMaxX, wMaxY, wMaxSize, wMaxSize);
     ctx.restore();
 
-    // Minimize (line)
     const wMinW = 12 * headerScale;
     const wMinX = wMaxX - winIconGap - wMinW;
     const wMinY = winBaseY - 0.6 * headerScale;
@@ -229,7 +200,6 @@ export function drawBrowserTabGlassMockup(context: MockupCanvasContext): MockupD
     ctx.fillRect(wMinX, wMinY, wMinW, 1.2 * headerScale);
     ctx.restore();
 
-    // Fin clip interior
     ctx.restore();
 
     return {

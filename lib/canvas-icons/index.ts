@@ -1,16 +1,9 @@
-/**
- * Índice centralizado de todos los iconos para Canvas 2D
- * Exporta todas las funciones de dibujo de iconos desde un solo lugar
- */
-
-// Navigation icons
 export {
     drawChevronLeft,
     drawChevronRight,
     drawMenuIcon,
 } from "./navigation-icons";
 
-// Action icons
 export {
     drawPlusIcon,
     drawLockIcon,
@@ -23,7 +16,6 @@ export {
     drawWinButton
 } from "./action-icons";
 
-// Editor icons
 export {
     drawMagnifyIcon,
     drawMinusIcon,
@@ -32,7 +24,6 @@ export {
     drawVSCodeLogo,
 } from "./editor-icons";
 
-// Status icons
 export {
     drawWifiIcon,
     drawSignalBars,

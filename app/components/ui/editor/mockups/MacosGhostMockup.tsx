@@ -23,17 +23,14 @@ export function MacosGhostMockup({
     const cornerRadius = roundedCorners ?? config.cornerRadius;
     const headerOpacity = config.headerOpacity ?? 100;
     
-    // Factor de escala para el header (0.5 a 1.5)
     const headerScale = (config.headerScale || 100) / 100;
     
-    // Colores según el modo
     const bgColor = isDark ? "#1e1e1e" : "#f9f9f9";
     const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
     const textColor = isDark ? "#9ca3af" : "#6b7280";
     const urlBarBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
     const urlBarBgBase = deriveSearchBg(frameColor);
-    // Valores base escalados proporcionalmente
     const baseHeight = 36;
     const basePadding = 12;
     const baseGap = 12;
@@ -42,7 +39,6 @@ export function MacosGhostMockup({
     const baseUrlBarHeight = 24;
     const baseFontSize = 10;
     
-    // Aplicar escala
     const headerHeight = baseHeight * headerScale;
     const headerPadding = basePadding * headerScale;
     const buttonGroupGap = 6 * headerScale;
@@ -65,7 +61,6 @@ export function MacosGhostMockup({
                     : 'none',
             }}
         >
-            {/* Header del navegador - usa frameColor como color de fondo */}
             <div 
                 className="flex items-center justify-between select-none shrink-0"
                 style={{
@@ -77,12 +72,10 @@ export function MacosGhostMockup({
                     borderTopRightRadius: `${cornerRadius}px`,
                 }}
             >
-                {/* Grupo izquierdo: botones de ventana + navegación */}
                 <div 
                     className="flex items-center"
                     style={{ gap: `${baseGap * headerScale}px` }}
                 >
-                    {/* Botones de ventana macOS */}
                     <div className="flex" style={{ gap: `${buttonGroupGap}px` }}>
                         <div 
                             className="rounded-full border border-gray-400" 
@@ -98,7 +91,6 @@ export function MacosGhostMockup({
                         />
                     </div>
 
-                    {/* Controles de navegación */}
                     <div 
                         className="flex items-center" 
                         style={{ gap: `${navGap}px`, color: textColor }}
@@ -119,7 +111,6 @@ export function MacosGhostMockup({
                     </div>
                 </div>
 
-                {/* Barra de URL central */}
                 <div 
                     className="flex-1 max-w-xl"
                     style={{ margin: `0 ${urlBarMargin}px` }}
@@ -164,7 +155,6 @@ export function MacosGhostMockup({
                     </div>
                 </div>
 
-                {/* Grupo derecho: acciones */}
                 <div 
                     className="flex items-center" 
                     style={{ gap: `${rightGroupGap}px`, color: textColor }}
@@ -176,7 +166,6 @@ export function MacosGhostMockup({
                 </div>
             </div>
 
-            {/* Contenido del navegador - donde va el video */}
             <div 
                 className="flex-1 relative overflow-hidden"
                 style={{ backgroundColor: bgColor }}

@@ -28,8 +28,6 @@ function ensureStopIds(stops: ColorStop[]): ColorStop[] {
     }));
 }
 
-// ── Native Drag & Drop — zero re-renders, original-position hit testing ──
-
 interface SortableStopListProps {
     stops: ColorStop[];
     onReorder: (newStops: ColorStop[]) => void;
@@ -71,13 +69,10 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
                 el.style.transform = "none";
                 return;
             }
-            // Which items need to slide to make room for the dragged item?
             let shift = 0;
             if (dragIdx < overIdx) {
-                // moving down → items between [dragIdx+1 .. overIdx] slide UP by h
                 if (i > dragIdx && i <= overIdx) shift = -h;
             } else if (dragIdx > overIdx) {
-                // moving up → items between [overIdx .. dragIdx-1] slide DOWN by h
                 if (i >= overIdx && i < dragIdx) shift = h;
             }
             el.style.transform = shift !== 0 ? `translateY(${shift}px)` : "none";
@@ -88,7 +83,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
         if (indicatorRef.current && originalRectsRef.current[overIdx]) {
             const orig = originalRectsRef.current[overIdx];
             const listTop = listRef.current!.getBoundingClientRect().top;
-            // Line goes BELOW target when dragging down, ABOVE when dragging up
             const lineY = dragIdx <= overIdx
                 ? orig.bottom - listTop
                 : orig.top - listTop;
@@ -113,7 +107,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
         const rowEl = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-drag-row]");
         if (!rowEl) return;
 
-        // ── Snapshot original positions BEFORE any transforms ──────────────
         const items = getItemEls();
         originalRectsRef.current = items.map(el => {
             const r = el.getBoundingClientRect();
@@ -127,7 +120,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
         dragIdxRef.current = index;
         overIdxRef.current = index;
 
-        // ── Ghost element ────────────────────────────────────────────────────
         const ghost = rowEl.cloneNode(true) as HTMLDivElement;
         Object.assign(ghost.style, {
             position: "fixed",
@@ -148,7 +140,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
         document.body.appendChild(ghost);
         ghostRef.current = ghost;
 
-        // ── Indicator line ───────────────────────────────────────────────────
         const indicator = document.createElement("div");
         Object.assign(indicator.style, {
             position: "absolute",
@@ -177,12 +168,10 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
 
         applyVisuals(index, index);
 
-        // ── Pointer move ─────────────────────────────────────────────────────
         const onMove = (mv: PointerEvent) => {
             ghost.style.left = `${mv.clientX - offsetRef.current.x}px`;
             ghost.style.top = `${mv.clientY - offsetRef.current.y}px`;
 
-            // Hit-test against ORIGINAL (pre-transform) midpoints — no jitter
             const origs = originalRectsRef.current;
             let newOver = 0;
             for (let i = 0; i < origs.length; i++) {
@@ -196,7 +185,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
             }
         };
 
-        // ── Pointer up ───────────────────────────────────────────────────────
         const onUp = () => {
             document.removeEventListener("pointermove", onMove);
             document.removeEventListener("pointerup", onUp);
@@ -209,8 +197,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
             const from = dragIdxRef.current;
             const to = overIdxRef.current;
 
-            // Snap items to final positions instantly before React re-renders
-            // so there's no visual jump when state updates
             if (from !== to) {
                 const items2 = getItemEls();
                 items2.forEach(el => {
@@ -250,8 +236,7 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
             <div ref={listRef} className="space-y-1">
                 {stops.map((stop, index) => (
                     <div key={stop.id} data-drag-row>
-                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] group/row" style={{ transition: "background 150ms" }}>
-                            {/* Drag handle */}
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/3 hover:bg-white/5 group/row" style={{ transition: "background 150ms" }}>
                             <div
                                 onPointerDown={(e) => handlePointerDown(e, index)}
                                 className="cursor-grab active:cursor-grabbing p-1 text-white/25 hover:text-white/60 transition-colors touch-none select-none flex-shrink-0"
@@ -259,7 +244,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
                                 <Icon icon="icon-park-outline:drag" width="14" />
                             </div>
 
-                            {/* Color swatch */}
                             <div className="group/sw w-7 h-7 rounded-md border border-white/20 shrink-0 relative overflow-hidden">
                                 <div className="w-full h-full" style={{ backgroundColor: stop.color }} />
                                 <input
@@ -273,7 +257,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
                                 </div>
                             </div>
 
-                            {/* Slider + hex */}
                             <div className="flex-1 min-w-0 space-y-0.5">
                                 <div className="text-[9px] font-mono text-white/35 uppercase">{stop.color}</div>
                                 <input
@@ -301,7 +284,6 @@ function SortableStopList({ stops, onReorder, onColorChange, onPositionChange, o
     );
 }
 
-// ── Main component ────────────────────────────────────────────────────────
 
 export function BackgroundColorEditor({ value, onChange }: BackgroundColorEditorProps) {
     const [mode, setMode] = useState<"solid" | "gradient">(

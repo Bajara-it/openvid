@@ -1,10 +1,3 @@
-/**
- * Iconos de editor y ventana para Canvas 2D
- */
-
-/**
- * Dibuja un icono de lupa (magnify/search)
- */
 export function drawMagnifyIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -12,12 +5,10 @@ export function drawMagnifyIcon(ctx: CanvasRenderingContext2D, x: number, y: num
     ctx.lineCap = "round";
     const s = size;
     
-    // Círculo de la lupa
     ctx.beginPath();
     ctx.arc(x + s * 0.42, y + s * 0.42, s * 0.25, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Mango de la lupa
     ctx.beginPath();
     ctx.moveTo(x + s * 0.6, y + s * 0.6);
     ctx.lineTo(x + s * 0.8, y + s * 0.8);
@@ -25,9 +16,6 @@ export function drawMagnifyIcon(ctx: CanvasRenderingContext2D, x: number, y: num
     ctx.restore();
 }
 
-/**
- * Dibuja un icono de minimizar (línea horizontal)
- */
 export function drawMinusIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -42,9 +30,6 @@ export function drawMinusIcon(ctx: CanvasRenderingContext2D, x: number, y: numbe
     ctx.restore();
 }
 
-/**
- * Dibuja un icono de maximizar (cuadrado)
- */
 export function drawSquareIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -57,9 +42,6 @@ export function drawSquareIcon(ctx: CanvasRenderingContext2D, x: number, y: numb
     ctx.restore();
 }
 
-/**
- * Dibuja un icono de cerrar (X)
- */
 export function drawCloseIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -76,9 +58,6 @@ export function drawCloseIcon(ctx: CanvasRenderingContext2D, x: number, y: numbe
     ctx.restore();
 }
 
-/**
- * Dibuja el icono de VS Code
- */
 export function drawVSCodeLogo(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
     ctx.save();
     

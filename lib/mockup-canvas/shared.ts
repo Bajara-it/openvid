@@ -1,10 +1,3 @@
-/**
- * Utilidades compartidas para el renderizado de mockups en Canvas
- */
-
-/**
- * Helper para dibujar rectángulos con esquinas redondeadas
- */
 export function drawRoundedRectPath(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -27,9 +20,6 @@ export function drawRoundedRectPath(
     ctx.closePath();
 }
 
-/**
- * Dibuja el efecto de sombra exterior sin bloquear el fondo
- */
 export function drawMockupShadow(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -46,7 +36,6 @@ export function drawMockupShadow(
     ctx.shadowBlur = shadowBlur;
     ctx.shadowOffsetY = shadowBlur * 0.3;
 
-    // Dibujar solo el borde del mockup completo para crear la sombra
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; // Más visible para sombras notorias
     ctx.lineWidth = 1;
     drawRoundedRectPath(ctx, x, y, width, height, cornerRadius);

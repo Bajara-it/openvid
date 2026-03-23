@@ -22,7 +22,6 @@ export function BrowserTabGlassMockup({
 
     const bgColor = isDark ? "#1e1e1e" : "#f9f9f9";
 
-    // Dark/light tab styles
     const tabBg          = isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.8)";
     const tabBorderColor = isDark ? "rgba(255,255,255,0.2)"  : "rgba(255,255,255,0.9)";
     const tabTitleColor  = isDark ? "#d1d5db"                : "#374151"; // gray-300 / gray-700
@@ -55,7 +54,6 @@ export function BrowserTabGlassMockup({
                 borderLeft: "1px solid rgba(255,255,255,0.6)",
             }}
         >
-            {/* ── Tab bar ── */}
             <div
                 className="flex items-end justify-between select-none shrink-0 relative z-10"
                 style={{
@@ -66,9 +64,7 @@ export function BrowserTabGlassMockup({
                     borderTopRightRadius: `${cornerRadius}px`,
                 }}
             >
-                {/* LEFT: dots + active tab + add button */}
                 <div className="flex items-end" style={{ gap: `${12 * headerScale}px` }}>
-                    {/* Window dots */}
                     <div
                         className="flex"
                         style={{ gap: `${dotGap}px`, paddingLeft: `${dotPaddingX}px`, marginBottom: `${10 * headerScale}px` }}
@@ -87,7 +83,6 @@ export function BrowserTabGlassMockup({
                         ))}
                     </div>
 
-                    {/* Active tab */}
                     <div
                         className="flex items-center justify-between"
                         style={{
@@ -103,7 +98,6 @@ export function BrowserTabGlassMockup({
                             boxShadow: "-5px 0 15px rgba(0,0,0,0.05)",
                         }}
                     >
-                        {/* Favicon dot + title */}
                         <div className="flex items-center overflow-hidden" style={{ gap: `${8 * headerScale}px` }}>
                             <div
                                 style={{
@@ -122,7 +116,6 @@ export function BrowserTabGlassMockup({
                                 {url ?? "Nueva pestaña"}
                             </span>
                         </div>
-                        {/* Close X */}
                         <div
                             className="flex items-center justify-center relative flex-shrink-0"
                             style={{
@@ -138,7 +131,6 @@ export function BrowserTabGlassMockup({
                         </div>
                     </div>
 
-                    {/* Add tab button */}
                     <div
                         className="flex items-center justify-center rounded-full"
                         style={{
@@ -156,7 +148,6 @@ export function BrowserTabGlassMockup({
                     </div>
                 </div>
 
-                {/* RIGHT: Windows-style buttons */}
                 <div
                     className="flex items-center"
                     style={{ gap: `${winIconGap}px`, marginBottom: `${winIconMB}px`, marginRight: `${winIconMR}px` }}
@@ -169,7 +160,6 @@ export function BrowserTabGlassMockup({
                 </div>
             </div>
 
-            {/* ── Content ── */}
             <div
                 className="flex-1 relative overflow-hidden"
                 style={{

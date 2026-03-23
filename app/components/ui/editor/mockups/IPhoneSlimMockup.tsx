@@ -21,10 +21,8 @@ export function IPhoneSlimMockup({
     const cornerRadius = roundedCorners ?? config.cornerRadius;
     const headerOpacity = config.headerOpacity ?? 100;
     
-    // Escalado proporcional del header (status bar, dynamic island)
     const headerScale = (config.headerScale || 100) / 100;
     
-    // Valores base para status bar y elementos que escalan
     const statusBarHeight = 28 * headerScale;
     const statusBarPaddingX = 24 * headerScale;
     const timeFontSize = 10 * headerScale;
@@ -34,21 +32,17 @@ export function IPhoneSlimMockup({
     const batteryHeight = 10 * headerScale;
     const iconsGap = 4 * headerScale;
     
-    // Dynamic Island escalado
     const dynamicIslandTop = 6 * headerScale;
     const dynamicIslandMinHeight = 18 * headerScale;
     const dynamicIslandPaddingX = 8 * headerScale;
     const dynamicIslandGap = 4 * headerScale;
     const dotSize = 6 * headerScale;
     
-    // Home indicator
     const homeIndicatorBottom = 6 * headerScale;
     const homeIndicatorHeight = 3 * headerScale;
     
-    // Marco exterior
     const framePadding = 6 * headerScale;
     
-    // Colores según el modo
     const screenBg = isDark ? "#0a0a0a" : "#fafafa";
     const statusBarText = isDark ? "#ffffff" : "#000000";
     const borderColor = isDark ? "#404040" : "#525252";
@@ -57,7 +51,6 @@ export function IPhoneSlimMockup({
         <div 
             className={`relative flex flex-col ${className}`}
         >
-            {/* Marco exterior del iPhone - usa frameColor */}
             <div 
                 className="relative flex flex-col"
                 style={{
@@ -70,9 +63,8 @@ export function IPhoneSlimMockup({
                     border: `1px solid ${borderColor}`,
                 }}
             >
-                {/* Botones laterales izquierdos */}
                 <div 
-                    className="absolute -left-[5px] top-[15%] w-[4px] h-[6%] rounded-l-sm"
+                    className="absolute -left-1.25 top-[15%] w-1 h-[6%] rounded-l-sm"
                     style={{ 
                         backgroundColor: hexToRgba(frameColor, headerOpacity),
                         borderLeft: `1px solid ${borderColor}`,
@@ -81,7 +73,7 @@ export function IPhoneSlimMockup({
                     }}
                 />
                 <div 
-                    className="absolute -left-[5px] top-[24%] w-[4px] h-[12%] rounded-l-sm"
+                    className="absolute -left-1.25 top-[24%] w-1 h-[12%] rounded-l-sm"
                     style={{ 
                         backgroundColor: hexToRgba(frameColor, headerOpacity),
                         borderLeft: `1px solid ${borderColor}`,
@@ -90,9 +82,8 @@ export function IPhoneSlimMockup({
                     }}
                 />
                 
-                {/* Botón lateral derecho (power) */}
                 <div 
-                    className="absolute -right-[5px] top-[28%] w-[4px] h-[14%] rounded-r-sm"
+                    className="absolute -right-1.25 top-[28%] w-1 h-[14%] rounded-r-sm"
                     style={{ 
                         backgroundColor: hexToRgba(frameColor, headerOpacity),
                         borderRight: `1px solid ${borderColor}`,
@@ -101,7 +92,6 @@ export function IPhoneSlimMockup({
                     }}
                 />
 
-                {/* Pantalla interior */}
                 <div 
                     className="relative w-full h-full overflow-hidden flex flex-col border border-black"
                     style={{
@@ -109,7 +99,6 @@ export function IPhoneSlimMockup({
                         borderRadius: `${cornerRadius * 2.2}px`,
                     }}
                 >
-                    {/* Dynamic Island */}
                     <div 
                         className="absolute left-1/2 -translate-x-1/2 w-[28%] bg-black rounded-full z-30 flex items-center justify-end"
                         style={{ 
@@ -131,7 +120,6 @@ export function IPhoneSlimMockup({
                         />
                     </div>
 
-                    {/* Status Bar */}
                     <div 
                         className="absolute top-0 w-full flex items-center justify-between z-20"
                         style={{
@@ -152,7 +140,6 @@ export function IPhoneSlimMockup({
                             className="flex items-center opacity-90"
                             style={{ gap: `${iconsGap}px` }}
                         >
-                            {/* Signal bars */}
                             <div 
                                 className="flex items-end"
                                 style={{ gap: '1px', height: `${batteryHeight}px` }}
@@ -190,7 +177,6 @@ export function IPhoneSlimMockup({
                                     }} 
                                 />
                             </div>
-                            {/* WiFi */}
                             <Icon 
                                 icon="mdi:wifi" 
                                 style={{ 
@@ -199,9 +185,8 @@ export function IPhoneSlimMockup({
                                     color: statusBarText 
                                 }} 
                             />
-                            {/* Battery */}
                             <div 
-                                className="border rounded-[3px] p-[1px] relative"
+                                className="border rounded-[3px] p-px relative"
                                 style={{ 
                                     width: `${batteryWidth}px`,
                                     height: `${batteryHeight}px`,
@@ -216,14 +201,12 @@ export function IPhoneSlimMockup({
                         </div>
                     </div>
 
-                    {/* Contenido de pantalla - donde va el video */}
                     <div 
                         className="w-full h-full relative overflow-hidden"
                         style={{ 
                             paddingTop: `max(${statusBarHeight}px, 8%)`,
                         }}
                     >
-                        {/* Background layer only for content area below status bar */}
                         <div 
                             className="absolute inset-0" 
                             style={{ 
@@ -236,7 +219,6 @@ export function IPhoneSlimMockup({
                         </div>
                     </div>
 
-                    {/* Home indicator */}
                     <div 
                         className="absolute left-1/2 -translate-x-1/2 w-[35%] rounded-full z-20"
                         style={{ 

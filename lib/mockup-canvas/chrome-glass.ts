@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de Chrome Glass en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import {
@@ -26,7 +22,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     const glassCornerRadius = cornerRadius;
     const innerCornerRadius = Math.max(0, glassCornerRadius + 4);
 
-    // ── Dimensiones — idénticas a ChromeGlassMockup.tsx ──
     const tabBarH = 32 * headerScale;
     const tabH = 26 * headerScale;
     const tabW = 180 * headerScale;
@@ -51,7 +46,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
 
     const totalHeaderH = tabBarH + addrH;
 
-    // ── Colores — idénticos a ChromeGlassMockup.tsx ──
     const bgColor = isDark ? "#1e1e1e" : "#ffffff";
     const tabBarBg = frameColor;
     const addressBg = frameColor;
@@ -62,16 +56,13 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     const iconColor = isDark ? "rgba(255,255,255,0.5)" : "rgba(55,65,81,0.7)";
     const tabBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
-    // 0. Sombra exterior
     drawMockupShadow(ctx, x, y, width, height, glassCornerRadius, shadowBlur);
 
-    // 1. Área interior
     const innerX = x + glassPadding;
     const innerY = y + glassPadding;
     const innerWidth = width - glassPadding * 2;
     const innerHeight = height - glassPadding * 2;
 
-    // 2. Cáscara glass
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, glassCornerRadius);
     const grad = ctx.createLinearGradient(x, y + height, x + width, y);
@@ -91,16 +82,13 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // 3. Clip al área interior
     ctx.save();
     drawRoundedRectPath(ctx, innerX, innerY, innerWidth, innerHeight, innerCornerRadius);
     ctx.clip();
 
-    // ── FILA 1: Tab bar ──
     ctx.fillStyle = hexToRgba(tabBarBg, headerOpacity);
     ctx.fillRect(innerX, innerY, innerWidth, tabBarH);
 
-    // Tab activa
     const tabX = innerX + tabML;
     const tabY = innerY + tabMT;
     ctx.save();
@@ -123,7 +111,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // Favicon
     const favX = tabX + tabPadX + tabIconSz / 2;
     const favY = tabY + tabH / 2;
     ctx.save();
@@ -133,7 +120,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.fill();
     ctx.restore();
 
-    // Título tab
     const titleX = favX + tabIconSz / 2 + 6 * headerScale;
     const titleMaxW = tabW - tabPadX * 2 - tabIconSz - tabCloseS - 16 * headerScale;
     ctx.save();
@@ -149,7 +135,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.restore();
     ctx.restore();
 
-    // Close X (tabCloseS — más pequeño que favicon)
     const cX = tabX + tabW - tabPadX - tabCloseS;
     const cY = tabY + (tabH - tabCloseS) / 2;
     ctx.save();
@@ -163,7 +148,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // New tab + (pequeño, centrado verticalmente)
     const plusCX = tabX + tabW + plusML + plusSize;
     const plusCY = innerY + tabBarH / 2;
     ctx.save();
@@ -179,7 +163,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // Windows buttons — centrados en tabBarH
     const wBaseX = innerX + innerWidth - winBtnW * 3;
     ctx.save();
     ctx.fillStyle = iconColor;
@@ -204,7 +187,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // ── FILA 2: Address bar ──
     const addrY = innerY + tabBarH;
     ctx.fillStyle = hexToRgba(addressBg, headerOpacity);
     ctx.fillRect(innerX, addrY, innerWidth, addrH);
@@ -218,7 +200,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.stroke();
     ctx.restore();
 
-    // Nav: back, forward (dimmed), refresh
     const navY = addrY + (addrH - navBtnSz) / 2;
     let curX = innerX + addrPadX;
     drawBackIcon(ctx, curX, navY, navBtnSz, iconColor);
@@ -230,7 +211,6 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     drawRefreshIcon(ctx, curX, navY, navBtnSz, iconColor);
     curX += navBtnSz + 12 * headerScale;
 
-    // URL bar (pill)
     const rightIconsW = iconSz * 0.85 * 2 + 28 * headerScale;
     const urlBarW = innerX + innerWidth - curX - rightIconsW - 8 * headerScale;
     const urlBarX = curX;
@@ -258,13 +238,11 @@ export function drawChromeGlassMockup(context: MockupCanvasContext): MockupDrawR
     ctx.restore();
     ctx.restore();
 
-    // Star + dots
     const rX = urlBarX + urlBarW + 8 * headerScale;
     const rY = addrY + (addrH - iconSz * 0.85) / 2;
     drawStarIcon(ctx, rX, rY, iconSz * 0.85, iconColor);
     drawThreeDotsIcon(ctx, rX + iconSz * 0.85 + 8 * headerScale, rY, iconSz * 0.85, iconColor);
 
-    // ── Fondo contenido ──
     ctx.fillStyle = bgColor;
     ctx.fillRect(innerX, innerY + totalHeaderH, innerWidth, innerHeight - totalHeaderH);
 

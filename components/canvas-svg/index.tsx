@@ -119,6 +119,33 @@ export const DropSvg = ({ color = "currentColor", className }: SvgProps) => (
     </svg>
 );
 
+export const BlobSvg = ({ color = "currentColor", className }: SvgProps) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <path d="M12 3c2.779 0 5.349 1.556 7.243 4.082C20.971 9.388 22 12.341 22 15.098c0 1.47-.293 2.718-.903 3.745c-.603 1.014-1.479 1.758-2.582 2.257c-1.593.718-3.335.9-6.515.9c-3.175 0-4.92-.183-6.514-.9c-1.012-.457-1.833-1.12-2.426-2.01l-.157-.247C2.293 17.815 2 16.569 2 15.098c0-2.757 1.03-5.71 2.757-8.016C6.65 4.556 9.22 3 12 3" fill={color} stroke={color} strokeWidth="0.2" />
+    </svg>
+);
+
+export const BlobOutlineSvg = ({ color = "currentColor", className }: SvgProps) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+        <path d="M5.897 20.188C7.567 20.94 9.793 21 12 21s4.434-.059 6.104-.812c.868-.392 1.614-.982 2.133-1.856c.514-.865.763-1.94.763-3.234c0-2.577-.983-5.315-2.557-7.416C16.873 5.588 14.61 4 12 4S7.127 5.588 5.557 7.682C3.983 9.783 3 12.522 3 15.098c0 1.295.249 2.369.763 3.234c.519.874 1.265 1.464 2.134 1.856" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+export const ScribbleSvg = ({ color = "currentColor", className }: SvgProps) => (
+    <svg className={className} viewBox="0 0 202 101" fill="none">
+        <path d="M34.9272 71.7499C49.0201 51.2785 68.216 32.1268 91.8572 23.2776C99.0395 20.5764 108.893 18.507 115.614 23.4811C124.219 30.029 121.034 49.6958 109.17 50.7256C102.732 51.2337 99.075 44.2766 101.055 38.7656C102.052 35.5041 104.469 32.9168 107.238 30.7512C130.482 11.6545 164.891 3.54691 192.813 17.1454" stroke={color} strokeWidth="5.36788" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M53.8641 80.4045C46.2877 81.433 19.9919 97.2132 12.5981 97.9465C14.0167 94.3334 14.9012 90.5939 16.0245 86.7982C17.2743 82.4682 17.7508 78.0682 17.9885 73.7245" stroke={color} strokeWidth="5.36788" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+export const SplashSvg = ({ color = "currentColor", className }: SvgProps) => (
+    <svg className={className} viewBox="0 0 73 71" fill="none">
+        <path d="M43.8502 61.802C43.8502 61.802 32.8124 62.7538 22.438 66.6412" stroke={color} strokeWidth="7.83319" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M47.9789 45.5349C34.1731 35.0426 16.1822 30.1244 4.89014 27.1407" stroke={color} strokeWidth="7.83319" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M43.2808 5.48645C43.2808 5.48645 64.6871 28.3272 65.8335 37.4153" stroke={color} strokeWidth="7.83319" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
 // Map of SVG components by ID
 export const SVG_COMPONENTS: Record<string, React.FC<SvgProps>> = {
     "rectangle": RectangleSvg,
@@ -139,6 +166,10 @@ export const SVG_COMPONENTS: Record<string, React.FC<SvgProps>> = {
     "chat": ChatSvg,
     "seal": SealSvg,
     "drop": DropSvg,
+    "blob": BlobSvg,
+    "blob-outline": BlobOutlineSvg,
+    "scribble": ScribbleSvg,
+    "splash": SplashSvg,
 };
 
 // SVG data for each shape (for canvas export) - uses exact same paths as React components
@@ -219,6 +250,24 @@ const SVG_DATA: Record<string, SvgData> = {
     "drop": {
         viewBox: "0 0 256 256",
         paths: '<path d="M134.88 6.17a12 12 0 0 0-13.76 0a259 259 0 0 0-42.18 39C50.85 77.43 36 111.62 36 144a92 92 0 0 0 184 0c0-77.36-81.64-135.4-85.12-137.83M128 212a68.07 68.07 0 0 1-68-68c0-33.31 20-63.37 36.7-82.71A249.4 249.4 0 0 1 128 31.11a249.4 249.4 0 0 1 31.3 30.18C176 80.63 196 110.69 196 144a68.07 68.07 0 0 1-68 68m49.62-52.4a52 52 0 0 1-34 34a12.2 12.2 0 0 1-3.6.55a12 12 0 0 1-3.6-23.45a28 28 0 0 0 18.32-18.32a12 12 0 0 1 22.9 7.2Z" stroke-width="6.5" />'
+    },
+    "blob": {
+        viewBox: "0 0 24 24",
+        paths: '<path d="M12 3c2.779 0 5.349 1.556 7.243 4.082C20.971 9.388 22 12.341 22 15.098c0 1.47-.293 2.718-.903 3.745c-.603 1.014-1.479 1.758-2.582 2.257c-1.593.718-3.335.9-6.515.9c-3.175 0-4.92-.183-6.514-.9c-1.012-.457-1.833-1.12-2.426-2.01l-.157-.247C2.293 17.815 2 16.569 2 15.098c0-2.757 1.03-5.71 2.757-8.016C6.65 4.556 9.22 3 12 3" stroke-width="0.2" />'
+    },
+    "blob-outline": {
+        viewBox: "0 0 24 24",
+        paths: '<path d="M5.897 20.188C7.567 20.94 9.793 21 12 21s4.434-.059 6.104-.812c.868-.392 1.614-.982 2.133-1.856c.514-.865.763-1.94.763-3.234c0-2.577-.983-5.315-2.557-7.416C16.873 5.588 14.61 4 12 4S7.127 5.588 5.557 7.682C3.983 9.783 3 12.522 3 15.098c0 1.295.249 2.369.763 3.234c.519.874 1.265 1.464 2.134 1.856" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />'
+    },
+    "scribble": {
+        viewBox: "0 0 202 101",
+        paths: `
+        <path d="M34.9272 71.7499C49.0201 51.2785 68.216 32.1268 91.8572 23.2776C99.0395 20.5764 108.893 18.507 115.614 23.4811C124.219 30.029 121.034 49.6958 109.17 50.7256C102.732 51.2337 99.075 44.2766 101.055 38.7656C102.052 35.5041 104.469 32.9168 107.238 30.7512C130.482 11.6545 164.891 3.54691 192.813 17.1454" stroke-width="5.36" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M53.8641 80.4045C46.2877 81.433 19.9919 97.2132 12.5981 97.9465C14.0167 94.3334 14.9012 90.5939 16.0245 86.7982C17.2743 82.4682 17.7508 78.0682 17.9885 73.7245" stroke-width="5.36" stroke-linecap="round" stroke-linejoin="round" />`
+    },
+    "splash": {
+        viewBox: "0 0 73 71",
+        paths: '<path d="M43.8502 61.802C43.8502 61.802 32.8124 62.7538 22.438 66.6412" stroke-width="7.83" stroke-linecap="round" stroke-linejoin="round" /><path d="M47.9789 45.5349C34.1731 35.0426 16.1822 30.1244 4.89014 27.1407" stroke-width="7.83" stroke-linecap="round" stroke-linejoin="round" /><path d="M43.2808 5.48645C43.2808 5.48645 64.6871 28.3272 65.8335 37.4153" stroke-width="7.83" stroke-linecap="round" stroke-linejoin="round" />'
     }
 };
 
@@ -229,10 +278,10 @@ const SVG_DATA: Record<string, SvgData> = {
 export function getSvgDataUrl(svgId: string, color: string): string {
     const svgData = SVG_DATA[svgId];
     if (!svgData) return '';
-    
+
     // Determine if this SVG uses stroke instead of fill (arrows use stroke)
     const usesStroke = svgData.paths.includes('stroke-linecap') || svgData.paths.includes('stroke-linejoin');
-    
+
     // Apply color to the path
     let styledPath: string;
     if (usesStroke) {
@@ -242,7 +291,7 @@ export function getSvgDataUrl(svgId: string, color: string): string {
         // For fill-based SVGs (shapes, decorative elements)
         styledPath = svgData.paths.replace(/<(path|rect|circle)/g, `<$1 fill="${color}" stroke="${color}"`);
     }
-    
+
     const svgString = `<svg viewBox="${svgData.viewBox}" xmlns="http://www.w3.org/2000/svg">${styledPath}</svg>`;
     return `data:image/svg+xml;base64,${btoa(svgString)}`;
 }

@@ -1,10 +1,3 @@
-/**
- * Iconos de acciones para Canvas 2D
- */
-
-/**
- * Dibuja un icono de más (+)
- */
 export function drawPlusIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -13,10 +6,8 @@ export function drawPlusIcon(ctx: CanvasRenderingContext2D, x: number, y: number
     const s = size;
 
     ctx.beginPath();
-    // Línea horizontal
     ctx.moveTo(x + s * 0.25, y + s * 0.5);
     ctx.lineTo(x + s * 0.75, y + s * 0.5);
-    // Línea vertical
     ctx.moveTo(x + s * 0.5, y + s * 0.25);
     ctx.lineTo(x + s * 0.5, y + s * 0.75);
     ctx.stroke();
@@ -190,7 +181,6 @@ export function drawWinButton(
         ctx.lineWidth = 1;
         ctx.strokeRect(cx - iconW / 2, cy - iconH / 2, iconW, iconH);
     } else {
-        // Close button — draw X
         ctx.lineWidth = 1.2 * scale;
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -215,7 +205,6 @@ export function drawBackIcon(ctx: CanvasRenderingContext2D, x: number, y: number
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // Trayecto: Línea horizontal + Punta de flecha
     ctx.beginPath();
     ctx.stroke(new Path2D("M19 12H5M12 19l-7-7 7-7"));
 
@@ -224,7 +213,6 @@ export function drawBackIcon(ctx: CanvasRenderingContext2D, x: number, y: number
 
 export function drawForwardIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, disabled: boolean = true) {
     ctx.save();
-    // Si está deshabilitada (por defecto), usamos un alpha muy bajo
     ctx.globalAlpha = disabled ? 0.35 : 0.8; 
     const scale = size / 24;
     ctx.translate(x, y);
@@ -235,7 +223,6 @@ export function drawForwardIcon(ctx: CanvasRenderingContext2D, x: number, y: num
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // Trayecto: Línea horizontal + Punta de flecha hacia la derecha
     ctx.beginPath();
     ctx.stroke(new Path2D("M5 12h14m-7 7l7-7-7-7"));
 

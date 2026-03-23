@@ -3,41 +3,12 @@
 import { Icon } from "@iconify/react";
 import { useState, useEffect, useRef, startTransition, useCallback } from "react";
 import { SliderControl } from "../SliderControl";
-import { SVG_CATEGORIES, IMAGE_CATEGORIES, PINNED_SVG_ITEMS, PINNED_IMAGE_ITEMS } from "@/lib/canvas-elements.config";
-import type { SvgElement, TextElement, ImageElement, CanvasElement } from "@/types/canvas-elements.types";
+import { SVG_CATEGORIES, IMAGE_CATEGORIES, PINNED_SVG_ITEMS, PINNED_IMAGE_ITEMS, getImagePreviewPath } from "@/lib/canvas-elements.config";
+import { SvgElement, TextElement, ImageElement, ElementsMenuProps, PRESET_COLORS, TEXT_PRESETS, FONT_FAMILIES, FONT_WEIGHTS } from "@/types/canvas-elements.types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-
-interface ElementsMenuProps {
-    onAddElement: (element: CanvasElement) => void;
-    selectedElement?: CanvasElement | null;
-    onUpdateElement?: (id: string, updates: Partial<CanvasElement>) => void;
-    onDeleteElement?: (id: string) => void;
-    onBringToFront?: (id: string) => void;
-    onSendToBack?: (id: string) => void;
-}
-
-const PRESET_COLORS = [
-    "#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF",
-];
-
-const TEXT_PRESETS: Array<{ label: string; fontSize: number; weight: "normal" | "medium" | "bold"; sample: string }> = [
-    { label: "Título", fontSize: 48, weight: "bold", sample: "Título" },
-    { label: "Subtítulo", fontSize: 32, weight: "medium", sample: "Subtítulo" },
-    { label: "Cuerpo", fontSize: 24, weight: "normal", sample: "Texto de cuerpo" },
-    { label: "Caption", fontSize: 18, weight: "normal", sample: "Caption" },
-];
-
-const FONT_FAMILIES = [
-    "Inter", "Roboto", "Arial", "Georgia", "Courier New", "Comic Sans MS"
-];
-
-const FONT_WEIGHTS: Array<{ key: "normal" | "medium" | "bold"; label: string }> = [
-    { key: "normal", label: "Regular" },
-    { key: "medium", label: "Medium" },
-    { key: "bold", label: "Bold" },
-];
+import { SVG_COMPONENTS } from "@/components/canvas-svg";
 
 export function ElementsMenu({
     onAddElement,
@@ -171,7 +142,7 @@ export function ElementsMenu({
         : IMAGE_CATEGORIES.find(cat => cat.id === selectedImageCategory)?.items.map(item => ({ ...item, category: selectedImageCategory })) || [];
 
     // Handler to add SVG element
-    const handleAddSvg = useCallback((item: { id: string; name: string; icon: string }, categoryId?: string) => {
+    const handleAddSvg = useCallback((item: { id: string; name: string; icon?: string }, categoryId?: string) => {
         const timestamp = Date.now();
         const newElement: SvgElement = {
             id: `svg-${timestamp}-${Math.random().toString(36).substring(2, 9)}`,
@@ -211,13 +182,33 @@ export function ElementsMenu({
     return (
         <div className="p-4 flex flex-col gap-5">
 
-            {/* Header */}
             <div className="flex items-center gap-2 text-white font-medium">
-                <Icon icon="iconoir:shapes" width="18" />
-                <span className="text-sm">Elementos</span>
+                <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="transition-colors duration-200"
+                >
+                    <path
+                        d="M11 13.5V21.5H3V13.5H11ZM9 15.5H5V19.5H9V15.5ZM12 2L17.5 11H6.5L12 2ZM12 5.86L10.08 9H13.92L12 5.86Z"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="0.2"
+                    />
+                    <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M13.7667 13.8246C13.7667 13.6323 13.8431 13.4479 13.9791 13.312C14.115 13.176 14.2994 13.0996 14.4917 13.0996H20.2917C20.484 13.0996 20.6684 13.176 20.8044 13.312C20.9403 13.4479 21.0167 13.6323 21.0167 13.8246V14.7913C21.0167 14.9836 20.9403 15.168 20.8044 15.3039C20.6684 15.4399 20.484 15.5163 20.2917 15.5163C20.0994 15.5163 19.915 15.4399 19.7791 15.3039C19.6431 15.168 19.5667 14.9836 19.5667 14.7913V14.5496H18.1167V20.3496H18.3584C18.5507 20.3496 18.7351 20.426 18.871 20.562C19.007 20.6979 19.0834 20.8823 19.0834 21.0746C19.0834 21.2669 19.007 21.4513 18.871 21.5873C18.7351 21.7232 18.5507 21.7996 18.3584 21.7996H16.4251C16.2328 21.7996 16.0484 21.7232 15.9124 21.5873C15.7764 21.4513 15.7001 21.2669 15.7001 21.0746C15.7001 20.8823 15.7764 20.6979 15.9124 20.562C16.0484 20.426 16.2328 20.3496 16.4251 20.3496H16.6667V14.5496H15.2167V14.7913C15.2167 14.9836 15.1403 15.168 15.0044 15.3039C14.8684 15.4399 14.684 15.5163 14.4917 15.5163C14.2994 15.5163 14.115 15.4399 13.9791 15.3039C13.8431 15.168 13.7667 14.9836 13.7667 14.7913V13.8246Z"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="0.5"
+                    />
+                </svg>
+                <span>Elementos</span>
             </div>
 
-            {/* Toggle: Elementos / Texto */}
             <div className="grid grid-cols-2 bg-[#09090B] squircle-element p-1 text-xs font-medium border border-white/5">
                 <button
                     className={`flex justify-center items-center gap-1.5 py-1.5 rounded transition ${mode === "elements" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}
@@ -235,17 +226,14 @@ export function ElementsMenu({
                 </button>
             </div>
 
-            {/* ── ELEMENTOS (FIGURAS + IMÁGENES) ── */}
             {mode === "elements" && (
                 <div className="flex flex-col gap-5 animate-in fade-in duration-150">
 
-                    {/* Figuras destacadas (11 + botón "+") */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
                             Figuras
                         </div>
                         <div className="grid grid-cols-6 gap-2">
-                            {/* 11 elementos destacados */}
                             {PINNED_SVG_ITEMS.map((item) => (
                                 <button
                                     key={item.id}
@@ -253,15 +241,24 @@ export function ElementsMenu({
                                     onClick={() => handleAddSvg(item)}
                                     className="aspect-square bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element flex items-center justify-center transition-all active:scale-90 group"
                                 >
-                                    <Icon
-                                        icon={item.icon}
-                                        width="18"
-                                        className="text-white/50 group-hover:text-white transition-colors"
-                                    />
+                                    {item.icon ? (
+                                        <Icon
+                                            icon={item.icon}
+                                            width="18"
+                                            className="text-white/50 group-hover:text-white transition-colors"
+                                        />
+                                    ) : (
+                                        // Renderizar el SVG component directamente como preview
+                                        (() => {
+                                            const SvgComponent = SVG_COMPONENTS[item.id];
+                                            return SvgComponent
+                                                ? <SvgComponent color="currentColor" className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+                                                : <span className="text-[9px] text-white/40">{item.name}</span>;
+                                        })()
+                                    )}
                                 </button>
                             ))}
 
-                            {/* Botón "+" para abrir popover */}
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <button
@@ -280,10 +277,9 @@ export function ElementsMenu({
                                     side="right"
                                     align="start"
                                     sideOffset={12}
-                                    className="w-100 p-0 border-0 shadow-2xl"
+                                    className="w-120 p-0 border-0 shadow-2xl"
                                 >
                                     <div className="flex flex-col bg-[#111113] border border-white/10 rounded-xl overflow-hidden shadow-2xl max-h-125">
-                                        {/* Header con categorías */}
                                         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/2 flex-wrap">
                                             <button
                                                 onClick={() => setSelectedSvgCategory("all")}
@@ -312,7 +308,6 @@ export function ElementsMenu({
                                             </span>
                                         </div>
 
-                                        {/* Grid de figuras */}
                                         <div className="p-3 grid grid-cols-6 gap-2 overflow-y-auto custom-scrollbar">
                                             {filteredSvgItems.map((item) => (
                                                 <button
@@ -321,11 +316,20 @@ export function ElementsMenu({
                                                     onClick={() => handleAddSvg(item, item.category)}
                                                     className="aspect-square bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element flex items-center justify-center transition-all active:scale-90 group"
                                                 >
-                                                    <Icon
-                                                        icon={item.icon}
-                                                        width="18"
-                                                        className="text-white/50 group-hover:text-white transition-colors"
-                                                    />
+                                                    {item.icon ? (
+                                                        <Icon
+                                                            icon={item.icon}
+                                                            width="18"
+                                                            className="text-white/50 group-hover:text-white transition-colors"
+                                                        />
+                                                    ) : (
+                                                        (() => {
+                                                            const SvgComponent = SVG_COMPONENTS[item.id];
+                                                            return SvgComponent
+                                                                ? <SvgComponent color="currentColor" className="w-4 h-4 text-white/50 scale-200 group-hover:text-white transition-colors" />
+                                                                : <span className="text-[9px] text-white/40">{item.name}</span>;
+                                                        })()
+                                                    )}
                                                 </button>
                                             ))}
                                         </div>
@@ -335,13 +339,11 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Imágenes destacadas (11 + botón "+") */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
                             Imágenes
                         </div>
                         <div className="grid grid-cols-6 gap-1.5">
-                            {/* Elementos de imagen destacados */}
                             {PINNED_IMAGE_ITEMS.map((item) => (
                                 <button
                                     key={item.id}
@@ -350,19 +352,17 @@ export function ElementsMenu({
                                     className="aspect-square bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element flex items-center justify-center transition-all active:scale-90 overflow-hidden group"
                                 >
                                     <img
-                                        src={item.imagePath}
+                                        src={getImagePreviewPath(item)}
                                         alt={item.name}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                     />
                                 </button>
                             ))}
 
-                            {/* Relleno vacío para mantener grid de 6 columnas */}
                             {Array.from({ length: Math.max(0, 11 - PINNED_IMAGE_ITEMS.length) }).map((_, i) => (
                                 <div key={`empty-${i}`} className="aspect-square" />
                             ))}
 
-                            {/* Botón "+" para abrir popover de imágenes */}
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <button
@@ -380,10 +380,9 @@ export function ElementsMenu({
                                     side="right"
                                     align="start"
                                     sideOffset={12}
-                                    className="w-100 p-0 border-0 shadow-2xl"
+                                    className="w-124 p-0 border-0 shadow-2xl"
                                 >
                                     <div className="flex flex-col bg-[#111113] border border-white/10 rounded-xl overflow-hidden shadow-2xl max-h-125">
-                                        {/* Header con categorías */}
                                         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/2 flex-wrap">
                                             <button
                                                 onClick={() => setSelectedImageCategory("all")}
@@ -412,8 +411,7 @@ export function ElementsMenu({
                                             </span>
                                         </div>
 
-                                        {/* Grid de imágenes */}
-                                        <div className="p-3 grid grid-cols-4 gap-2 overflow-y-auto custom-scrollbar">
+                                        <div className="p-3 grid grid-cols-8 gap-2 overflow-y-auto custom-scrollbar">
                                             {filteredImageItems.length === 0 ? (
                                                 <div className="col-span-4 text-xs text-white/30 italic py-8 text-center">
                                                     No hay imágenes disponibles
@@ -427,9 +425,9 @@ export function ElementsMenu({
                                                         className="aspect-square bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element flex items-center justify-center transition-all active:scale-90 overflow-hidden group"
                                                     >
                                                         <img
-                                                            src={item.imagePath}
+                                                            src={getImagePreviewPath(item)}
                                                             alt={item.name}
-                                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                                            className="w-full h-full object-contain group-hover:scale-110 transition-transform"
                                                         />
                                                     </button>
                                                 ))
@@ -441,10 +439,8 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Controles para elementos seleccionados */}
                     {selectedElement && (selectedElement.type === "svg" || selectedElement.type === "image") && (
                         <>
-                            {/* Color Picker (solo para SVG) */}
                             {selectedElement.type === "svg" && (
                                 <div className="space-y-2">
                                     <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Color</div>
@@ -496,7 +492,6 @@ export function ElementsMenu({
                                 />
                             </div>
 
-                            {/* Controles de jerarquía */}
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Jerarquía</div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -517,7 +512,6 @@ export function ElementsMenu({
                                 </div>
                             </div>
 
-                            {/* Acciones del elemento */}
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Acciones</div>
                                 <button
@@ -533,10 +527,8 @@ export function ElementsMenu({
                 </div>
             )}
 
-            {/* ── TEXTO ── */}
             {mode === "text" && (
                 <div className="flex flex-col gap-5 animate-in fade-in duration-150">
-                    {/* Texto content */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Contenido</div>
                         <input
@@ -548,7 +540,6 @@ export function ElementsMenu({
                         />
                     </div>
 
-                    {/* Presets para texto */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Presets</div>
                         <div className="grid grid-cols-2 gap-2">
@@ -572,7 +563,6 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Tamaño */}
                     <div className="flex flex-row justify-between gap-2 space-y-2">
                         <div className="space-y-2">
                             <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Tamaño</div>
@@ -627,7 +617,6 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Color */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Color</div>
                         <div className="flex gap-2">
@@ -660,7 +649,6 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Peso */}
                     <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Peso</div>
                         <div className="grid grid-cols-3 gap-2">
@@ -677,12 +665,10 @@ export function ElementsMenu({
                         </div>
                     </div>
 
-                    {/* Opacidad */}
                     <div className="space-y-3">
                         <SliderControl icon="mdi:opacity" label="Opacidad" value={textOpacity} onChange={setTextOpacity} />
                     </div>
 
-                    {/* Botón para agregar texto */}
                     <Button
                         onClick={() => {
                             const timestamp = Date.now();
@@ -711,10 +697,8 @@ export function ElementsMenu({
                         Agregar texto
                     </Button>
 
-                    {/* Controles para texto seleccionado */}
                     {selectedElement && selectedElement.type === "text" && (
                         <>
-                            {/* Controles de jerarquía */}
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Jerarquía</div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -735,7 +719,6 @@ export function ElementsMenu({
                                 </div>
                             </div>
 
-                            {/* Acciones del elemento */}
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">Acciones</div>
                                 <button

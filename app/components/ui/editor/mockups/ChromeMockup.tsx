@@ -26,7 +26,6 @@ export function ChromeMockup({
 
     const opacity       = headerOpacity / 100;
     const bgColor       = isDark ? "#1e1e1e" : "#ffffff";
-    // Toda la cabecera deriva de frameColor — igual que BraveMockup
     const tabBarBg      = frameColor;          // tab bar = frameColor directo
     const addressBg     = frameColor;          // address bar = frameColor directo
     const tabActiveBg   = deriveSearchBg(frameColor); // tab activa = ligeramente más clara/oscura
@@ -35,7 +34,6 @@ export function ChromeMockup({
     const textColor     = isDark ? "#9ca3af" : "#374151";
     const iconColor     = isDark ? "rgba(255,255,255,0.5)" : "rgba(55,65,81,0.7)";
 
-    // Tab bar row
     const tabBarH    = 32 * headerScale;
     const tabH       = 28 * headerScale;
     const tabW       = 180 * headerScale;
@@ -48,7 +46,6 @@ export function ChromeMockup({
     const plusML     = 4  * headerScale;
     const winBtnW    = 42 * headerScale;
 
-    // Address bar row
     const addrH      = 32 * headerScale;
     const addrPadX   = 8  * headerScale;
     const navBtnSize = 14 * headerScale;
@@ -69,7 +66,6 @@ export function ChromeMockup({
                     : "none",
             }}
         >
-            {/* ── ROW 1: Tab bar ── */}
             <div
                 className="flex items-end select-none shrink-0"
                 style={{
@@ -79,7 +75,6 @@ export function ChromeMockup({
                     borderTopRightRadius: `${cornerRadius}px`,
                 }}
             >
-                {/* Active tab */}
                 <div
                     className="flex items-center shrink-0"
                     style={{
@@ -95,20 +90,17 @@ export function ChromeMockup({
                         gap:             `${8 * headerScale}px`,
                     }}
                 >
-                    {/* Favicon */}
                     <svg style={{ width: `${tabIconSz}px`, height: `${tabIconSz}px`, flexShrink: 0, color: "#2563eb" }} fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
                     </svg>
                     <span className="truncate flex-1" style={{ fontSize: `${tabFontSz}px`, color: textColor }}>
                         {url?.replace(/^https?:\/\//, "") ?? "Nueva pestaña"}
                     </span>
-                    {/* Close */}
                     <svg style={{ width: `${tabIconSz}px`, height: `${tabIconSz}px`, flexShrink: 0, color: iconColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18L18 6M6 6l12 12" strokeWidth="2.5" strokeLinecap="round" />
                     </svg>
                 </div>
 
-                {/* New tab + */}
                 <div
                     className="flex items-center justify-center"
                     style={{
@@ -124,7 +116,6 @@ export function ChromeMockup({
                     </svg>
                 </div>
 
-                {/* Windows buttons (right) */}
                 <div className="ml-auto flex h-full" style={{ color: iconColor }}>
                     <div className="flex items-center justify-center" style={{ width: `${winBtnW}px` }}>
                         <svg width={10 * headerScale} height={1 * headerScale} viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1"/></svg>
@@ -142,7 +133,6 @@ export function ChromeMockup({
                 </div>
             </div>
 
-            {/* ── ROW 2: Address bar ── */}
             <div
                 className="flex items-center justify-between select-none shrink-0"
                 style={{
@@ -153,21 +143,17 @@ export function ChromeMockup({
                     gap:             `${8 * headerScale}px`,
                 }}
             >
-                {/* Left nav */}
                 <div className="flex items-center shrink-0" style={{ gap: `${navGap}px`, color: iconColor }}>
-                    {/* Back */}
                     <div className="p-1.5">
                         <svg width={navBtnSize} height={navBtnSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </div>
-                    {/* Forward (dimmed) */}
                     <div className="p-1.5" style={{ opacity: 0.35 }}>
                         <svg width={navBtnSize} height={navBtnSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M5 12h14m-7 7l7-7-7-7" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </div>
-                    {/* Refresh */}
                     <div className="p-1.5">
                         <svg width={navBtnSize} height={navBtnSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 12a9 9 0 11-2.12-5.88L21 9m0 0V3m0 6h-6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -175,7 +161,6 @@ export function ChromeMockup({
                     </div>
                 </div>
 
-                {/* URL bar */}
                 <div className="flex-1">
                     <div
                         className="rounded-full w-full flex items-center"
@@ -196,7 +181,6 @@ export function ChromeMockup({
                     </div>
                 </div>
 
-                {/* Right icons: star + dots */}
                 <div className="flex items-center shrink-0" style={{ gap: `${rightGap}px`, color: iconColor }}>
                     <div className="p-1.5">
                         <svg style={{ width: `${iconSz * 0.85}px`, height: `${iconSz * 0.85}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +195,6 @@ export function ChromeMockup({
                 </div>
             </div>
 
-            {/* Content */}
             <div
                 className="flex-1 relative overflow-hidden"
                 style={{ backgroundColor: bgColor }}

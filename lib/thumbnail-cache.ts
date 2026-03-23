@@ -1,8 +1,3 @@
-/**
- * IndexedDB cache for video thumbnails
- * Prevents regenerating thumbnails for the same video
- */
-
 const DB_NAME = "openvid-thumbnails";
 const DB_VERSION = 1;
 const STORE_NAME = "thumbnails";

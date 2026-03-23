@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de MacosGhostIde en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import { drawMagnifyIcon } from "@/lib/canvas-icons";
@@ -36,10 +32,8 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     const searchBgBase   = deriveSearchBg(frameColor);
     const hamburgerColor = isDark ? "rgba(163,163,163,0.8)" : "rgba(100,100,100,0.8)";
 
-    // 0. Sombra
     drawMockupShadow(ctx, x, y, width, height, cornerRadius, shadowBlur);
 
-    // 1. Fondo contenido
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x, y + headerHeight);
@@ -53,7 +47,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     ctx.fill();
     ctx.restore();
 
-    // 2. Header
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x + cornerRadius, y);
@@ -68,7 +61,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     ctx.fill();
     ctx.restore();
 
-    // 3. Borde inferior header
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -80,7 +72,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
 
     const midY = y + headerHeight / 2;
 
-    // ── LEFT: ghost dots (transparent + rgba(255,255,255,0.2) border) ──
     const dotsStartX = x + headerPaddingX;
     [0, 1, 2].forEach((i) => {
         const cx = dotsStartX + i * (dotSize + dotGap) + dotSize / 2;
@@ -93,7 +84,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
         ctx.restore();
     });
 
-    // ── Menu items ──
     const menuItems  = ["File", "Edit", "Selection", "View", "Go"];
     const dotsEndX   = dotsStartX + 3 * dotSize + 2 * dotGap + menuPaddingX * 2;
     let menuX        = dotsEndX;
@@ -109,7 +99,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     });
     ctx.restore();
 
-    // ── CENTER: Search bar ──
     const searchWidth = Math.min(width * 0.4, 400 * headerScale);
     const searchX     = x + (width - searchWidth) / 2;
     const searchY     = y + (headerHeight - searchHeight) / 2;
@@ -123,7 +112,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     ctx.stroke();
     ctx.restore();
 
-    // Centrar bloque [icono + gap + texto]
     ctx.save();
     ctx.font = `${searchFontSize}px "Inter", -apple-system, BlinkMacSystemFont, sans-serif`;
     const displayUrl  = url.substring(0, 30);
@@ -139,7 +127,6 @@ export function drawMacosGhostIdeMockup(context: MockupCanvasContext): MockupDra
     ctx.fillText(displayUrl, groupStartX + searchIconSize + searchGap, searchY + searchHeight / 2);
     ctx.restore();
 
-    // ── RIGHT: hamburger ──
     const hamW   = 14 * headerScale;
     const hamH   = 1.5 * headerScale;
     const hamGap = 3.5 * headerScale;

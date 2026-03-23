@@ -7,6 +7,7 @@ import { TIMELINE_LABEL_WIDTH, MIN_TRIM_DURATION } from "@/lib/constants";
 import type { TimelineProps } from "@/types/timeline.types";
 import LabelSidebar from "./LabelSidebar";
 import { ZoomFragmentTrackItem, findValidFragmentPosition } from "./ZoomFragmentTrackItem";
+import { AudioFragmentTrackItem } from "./AudioFragmentTrackItem";
 import { Icon } from "@iconify/react";
 
 // Default duration for new zoom fragments (in seconds)
@@ -30,6 +31,12 @@ export function Timeline({
     onAddZoomFragment,
     onUpdateZoomFragment,
     onActivateZoomTool,
+    // Audio props
+    audioTracks = [],
+    uploadedAudios = [],
+    selectedAudioTrackId,
+    onSelectAudioTrack,
+    onUpdateAudioTrack,
 }: TimelineProps) {
     const trackRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -260,7 +267,7 @@ export function Timeline({
                 <div className="flex-1 flex flex-col relative overflow-hidden">
 
                     {/* Label sidebar */}
-                    <LabelSidebar />
+                    <LabelSidebar audioTracksCount={audioTracks.length} />
                     {/* Scrollable content */}
                     <div
                         ref={trackRef}
@@ -349,11 +356,17 @@ export function Timeline({
                                             <div className="absolute inset-0 flex items-center overflow-hidden">
                                                 <div className="flex h-full w-full">
                                                     {videoUrl && Array.from({ length: Math.max(1, Math.ceil(getZoomMultiplier(zoomLevel) * 3)) }).map((_, i) => (
-                                                        <div key={i} className="h-full flex-1 border-r border-[#34A853]/10 last:border-r-0 bg-linear-to-b from-[#34A853]/5 to-transparent" />
+                                                        <div
+                                                            key={i}
+                                                            className="h-full flex-1 border-r border-[#34A853]/10 last:border-r-0"
+                                                            style={{
+                                                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(20, 80, 40, 0.1) 50%, rgba(52, 168, 83, 0.1) 100%)',
+                                                                boxShadow: 'inset 0px 1px 0px rgba(255, 255, 255, 0.05)'
+                                                            }}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
-
                                             <motion.div
                                                 className="absolute top-0 bottom-0 -left-px border-r-2 border-[#4ade80]"
                                                 style={{
@@ -415,7 +428,7 @@ export function Timeline({
                                         const rect = e.currentTarget.getBoundingClientRect();
                                         const clickX = e.clientX - rect.left;
                                         const clickTime = (clickX / contentWidth) * validDuration;
-                                        
+
                                         // Find valid position (avoiding overlaps)
                                         const validPosition = findValidFragmentPosition(
                                             clickTime,
@@ -423,7 +436,7 @@ export function Timeline({
                                             zoomFragments,
                                             validDuration
                                         );
-                                        
+
                                         if (validPosition) {
                                             onAddZoomFragment(validPosition.startTime);
                                         }
@@ -468,7 +481,7 @@ export function Timeline({
                                                 zoomFragments,
                                                 validDuration
                                             );
-                                            
+
                                             if (!validPosition) {
                                                 // No space available at all
                                                 return (
@@ -482,23 +495,23 @@ export function Timeline({
                                                     </div>
                                                 );
                                             }
-                                            
+
                                             // Calculate ghost position based on valid position
                                             const ghostLeft = (validPosition.startTime / validDuration) * contentWidth;
                                             const ghostWidth = ((validPosition.endTime - validPosition.startTime) / validDuration) * contentWidth;
-                                            
+
                                             return (
                                                 <motion.div
                                                     className="absolute top-[10%] h-[80%] pointer-events-none"
                                                     initial={false}
-                                                    animate={{ 
+                                                    animate={{
                                                         left: ghostLeft,
                                                         width: ghostWidth,
                                                     }}
                                                     transition={{ type: "spring", stiffness: 500, damping: 40 }}
                                                 >
                                                     <div className="w-full h-full rounded border border-dashed border-blue-400/50 bg-blue-500/10 flex flex-col items-center justify-center gap-0.5">
-                                                       <Icon icon="qlementine-icons:zoom-12" width="12" height="12" className="text-blue-400"/>
+                                                        <Icon icon="qlementine-icons:zoom-12" width="12" height="12" className="text-blue-400" />
                                                         <span className="text-[8px] font-mono text-blue-400/60">+ Zoom</span>
                                                     </div>
                                                 </motion.div>
@@ -506,6 +519,34 @@ export function Timeline({
                                         })()}
                                     </div>
                                 </div>
+
+                                {/* Audio track - only show if there are audio tracks */}
+                                {audioTracks.length > 0 && (
+                                    <div className="flex-1 flex items-center border-t border-white/5 relative">
+                                        <div
+                                            className="h-full flex items-center relative"
+                                            style={{ width: contentWidth > 0 ? contentWidth : '100%' }}
+                                        >
+                                            {/* Audio fragments with drag/resize */}
+                                            {audioTracks.map((track) => {
+                                                const audio = uploadedAudios?.find(a => a.id === track.audioId);
+                                                return (
+                                                    <AudioFragmentTrackItem
+                                                        key={track.id}
+                                                        track={track}
+                                                        audio={audio}
+                                                        isSelected={track.id === selectedAudioTrackId}
+                                                        contentWidth={contentWidth}
+                                                        videoDuration={validDuration}
+                                                        otherTracks={audioTracks.filter(t => t.id !== track.id)}
+                                                        onSelect={() => onSelectAudioTrack?.(track.id)}
+                                                        onUpdate={(updates) => onUpdateAudioTrack?.(track.id, updates)}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

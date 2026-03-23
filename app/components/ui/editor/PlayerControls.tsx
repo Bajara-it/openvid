@@ -121,7 +121,7 @@ export function PlayerControls({
                         <Icon icon="mdi:magnify-minus-outline" width="16" />
                     </button>
 
-                    <div className="w-16 h-[3px] bg-white/10 rounded-full relative group cursor-pointer">
+                    <div className="w-16 h-0.75 bg-white/10 rounded-full relative group cursor-pointer">
                         <div
                             className="absolute top-0 left-0 h-full bg-zinc-500 rounded-full transition-[width] duration-75"
                             style={{ width: `${zoomPercentage}%` }}
@@ -155,7 +155,7 @@ export function PlayerControls({
                         <Icon icon="mdi:magnify-plus-outline" width="16" />
                     </button>
 
-                    <span className="text-[10px] font-mono text-zinc-500 min-w-[20px]" aria-live="polite" aria-atomic="true">
+                    <span className="text-[10px] font-mono text-zinc-500 min-w-5" aria-live="polite" aria-atomic="true">
                         {Math.round(zoomLevel)}×
                     </span>
                 </div>

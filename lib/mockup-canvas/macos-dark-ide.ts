@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de MacosDarkIde en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import { drawMagnifyIcon } from "@/lib/canvas-icons";
@@ -16,7 +12,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     const headerOpacity = config.headerOpacity ?? 100;
     const headerScale   = (config.headerScale || 100) / 100;
 
-    // ── Dimensiones — idénticas a MacosDarkIdeMockup.tsx ──
     const headerHeight   = 35 * headerScale;
     const menuFontSize   = 12 * headerScale;
     const menuPaddingX   = 8  * headerScale;
@@ -30,7 +25,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     const dotSize        = 10 * headerScale;
     const dotGap         = 6  * headerScale;
 
-    // ── Colores ──
     const bgColor      = isDark ? "#1e1e1e" : "#f3f3f3";
     const borderColor  = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)";
     const textColor    = isDark ? "#cccccc" : "#333333";
@@ -39,10 +33,8 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     const searchBgBase = deriveSearchBg(frameColor);
     const hamburgerColor = isDark ? "rgba(163,163,163,0.8)" : "rgba(100,100,100,0.8)";
 
-    // 0. Sombra
     drawMockupShadow(ctx, x, y, width, height, cornerRadius, shadowBlur);
 
-    // 1. Fondo contenido
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x, y + headerHeight);
@@ -56,7 +48,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     ctx.fill();
     ctx.restore();
 
-    // 2. Header
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x + cornerRadius, y);
@@ -71,7 +62,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     ctx.fill();
     ctx.restore();
 
-    // 3. Borde inferior header
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -83,7 +73,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
 
     const midY = y + headerHeight / 2;
 
-    // ── LEFT: macOS dots ──
     const dotsStartX = x + headerPaddingX;
     const dotColors = [
         { fill: "#ff5f57", stroke: "#e0443e" },
@@ -103,7 +92,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
         ctx.restore();
     });
 
-    // ── Menu items ──
     const menuItems = ["File", "Edit", "Selection", "View", "Go"];
     const dotsEndX  = dotsStartX + 3 * dotSize + 2 * dotGap + menuPaddingX * 2;
     let menuX = dotsEndX;
@@ -119,7 +107,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     });
     ctx.restore();
 
-    // ── CENTER: Search bar ──
     const searchWidth = Math.min(width * 0.4, 400 * headerScale);
     const searchX     = x + (width - searchWidth) / 2;
     const searchY     = y + (headerHeight - searchHeight) / 2;
@@ -133,7 +120,6 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     ctx.stroke();
     ctx.restore();
 
-    // Medir texto para centrar el grupo [icono + gap + texto]
     ctx.save();
     ctx.font = `${searchFontSize}px "Inter", -apple-system, BlinkMacSystemFont, sans-serif`;
     const displayUrl   = url.substring(0, 30);
@@ -141,17 +127,14 @@ export function drawMacosDarkIdeMockup(context: MockupCanvasContext): MockupDraw
     const groupW       = searchIconSize + searchGap + textW;
     const groupStartX  = searchX + (searchWidth - groupW) / 2;
 
-    // Lupa
     drawMagnifyIcon(ctx, groupStartX, searchY + (searchHeight - searchIconSize) / 2, searchIconSize, textColor + "80");
 
-    // Texto
     ctx.fillStyle = textColor;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillText(displayUrl, groupStartX + searchIconSize + searchGap, searchY + searchHeight / 2);
     ctx.restore();
 
-    // ── RIGHT: hamburger ──
     const hamW   = 14 * headerScale;
     const hamH   = 1.5 * headerScale;
     const hamGap = 3.5 * headerScale;

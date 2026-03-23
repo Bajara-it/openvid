@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de Brave Glass en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import {
@@ -26,11 +22,9 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
 
     const headerScale = (config.headerScale || 100) / 100;
 
-    // Glass border padding (debe coincidir con el CSS: 7px)
     const glassPadding = 7;
     const glassCornerRadius = cornerRadius;
 
-    // Valores base escalados — igual que BraveMockup.tsx
     const headerHeight  = 32 * headerScale;
     const iconSize      = 14 * headerScale;
     const smallIcon     = iconSize * 0.75;
@@ -47,17 +41,14 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     const textColor   = isDark ? "#cccccc" : "#555555";
     const iconColor   = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)";
 
-    // 0. Sombra exterior
     drawMockupShadow(ctx, x, y, width, height, glassCornerRadius, shadowBlur);
 
-    // 1. Área interior
     const innerX           = x + glassPadding;
     const innerY           = y + glassPadding;
     const innerWidth       = width  - glassPadding * 2;
     const innerHeight      = height - glassPadding * 2;
     const innerCornerRadius = Math.max(0, glassCornerRadius + 4);
 
-    // 2. Cáscara glass (gradiente 45deg + bordes top/left)
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, glassCornerRadius);
     const grad = ctx.createLinearGradient(x, y + height, x + width, y);
@@ -78,16 +69,13 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     ctx.stroke();
     ctx.restore();
 
-    // 3. Clip al área interior
     ctx.save();
     drawRoundedRectPath(ctx, innerX, innerY, innerWidth, innerHeight, innerCornerRadius);
     ctx.clip();
 
-    // 4. Fondo contenido
     ctx.fillStyle = bgColor;
     ctx.fillRect(innerX, innerY + headerHeight, innerWidth, innerHeight - headerHeight);
 
-    // 5. Header
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(innerX + innerCornerRadius, innerY);
@@ -102,7 +90,6 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     ctx.fill();
     ctx.restore();
 
-    // 6. Línea separadora
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -114,7 +101,6 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
 
     const smallIconY = innerY + (headerHeight - smallIcon) / 2;
 
-    // ── LEFT: chevron-left, chevron-right (dimmed), refresh ──
     let curX = innerX + leftPadding;
     drawChevronLeft(ctx, curX, smallIconY, smallIcon, iconColor);
     curX += smallIcon + navGap;
@@ -122,7 +108,6 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     curX += smallIcon + navGap;
     drawRefreshIcon(ctx, curX, smallIconY, smallIcon, iconColor);
 
-    // ── CENTER: URL bar (lock + url + star) ──
     const urlBarWidth  = Math.min(innerWidth * 0.45, 576 * headerScale);
     const urlBarX      = innerX + (innerWidth - urlBarWidth) / 2;
     const urlBarY      = innerY + (headerHeight - urlBarHeight) / 2;
@@ -148,7 +133,6 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     const starSize = iconSize * 0.75;
     drawStarIcon(ctx, urlBarX + urlBarWidth - urlBarPadding - starSize, urlBarY + (urlBarHeight - starSize) / 2, starSize, "rgba(234,179,8,0.8)");
 
-    // ── RIGHT: download + three-dots + Windows buttons ──
     const winBtnsWidth  = winBtnW * 3;
     const dotsIconX     = innerX + innerWidth - winBtnsWidth - rightGap - smallIcon;
     const downloadIconX = dotsIconX - rightGap - smallIcon;
@@ -160,7 +144,6 @@ export function drawBraveGlassMockup(context: MockupCanvasContext): MockupDrawRe
     drawWinButton(ctx, innerX + innerWidth - winBtnW * 2, innerY, winBtnW, headerHeight, "maximize", iconColor, headerScale);
     drawWinButton(ctx, innerX + innerWidth - winBtnW,     innerY, winBtnW, headerHeight, "close",    iconColor, headerScale);
 
-    // Fin clip interior
     ctx.restore();
 
     return {

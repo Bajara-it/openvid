@@ -14,7 +14,6 @@ interface AspectRatioSelectProps {
     onCustomDimensionsChange?: (dimensions: { width: number; height: number }) => void;
 }
 
-// Separé "custom" de la lista principal para manejarlo en su propia sección
 const STANDARD_RATIOS: Partial<Record<AspectRatio, string>> = {
     "auto": "Auto",
     "16:9": "16:9 YouTube",

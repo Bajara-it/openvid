@@ -4,3 +4,4 @@ export * from './recording.types';
 export * from './background.types';
 export * from './zoom.types';
 export * from './mockup.types';
+export * from './audio.types';

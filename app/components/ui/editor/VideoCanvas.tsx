@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo, useState } from "react";
 import type { VideoCanvasHandle, VideoCanvasProps, VideoThumbnail } from "@/types";
-import type { ImageElement, SvgElement } from "@/types/canvas-elements.types";
+import type { ImageElement, SvgElement, CanvasElement } from "@/types/canvas-elements.types";
 import { ASPECT_RATIO_DIMENSIONS } from "@/types";
 import { getWallpaperUrl } from "@/lib/wallpaper.utils";
 import { drawRoundedRect, drawRoundedRectBottomOnly, calculateScaledPadding, applyCanvasBackground, getAspectRatioStyle, getMaxWidth } from "@/lib/canvas.utils";
@@ -22,6 +22,9 @@ const BOTTOM_ONLY_RADIUS_MOCKUPS = ["macos", "macos-glass", "macos-ghost", "maco
 // Mockups glass → manejan su propia sombra, no necesitan el rect sólido previo
 const SELF_SHADOWING_MOCKUPS = ["macos-glass", "macos-ghost-glass", "glass-ui-container", "macos-container-glass", "brave-glass", "browser-tab-glass", "chrome-glass"];
 
+// Z-index del video: elementos con zIndex < VIDEO_Z_INDEX se renderizan detrás del video
+export const VIDEO_Z_INDEX = 1000;
+
 export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(function VideoCanvas({
     videoRef,
     videoUrl,
@@ -35,6 +38,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     selectedWallpaper = -1,
     backgroundBlur = 0,
     selectedImageUrl = "",
+    unsplashOverrideUrl = "",
     backgroundColorCss,
     onTimeUpdate,
     onLoadedMetadata,
@@ -92,7 +96,8 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     }, [activeZoomFragment, zoomFragments, currentTime]);
 
     // Determinar qué background mostrar basado en el tab activo
-    const shouldShowWallpaper = backgroundTab === "wallpaper" && selectedWallpaper >= 0;
+    const shouldShowUnsplashOverride = backgroundTab === "wallpaper" && unsplashOverrideUrl !== "";
+    const shouldShowWallpaper = backgroundTab === "wallpaper" && selectedWallpaper >= 0 && !shouldShowUnsplashOverride;
     const shouldShowCustomImage = backgroundTab === "image" && selectedImageUrl !== "";
     const shouldShowCustomColor = backgroundTab === "color" && !!backgroundColorCss;
 
@@ -153,18 +158,20 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
         }
     }, [shouldShowWallpaper, wallpaperUrl]);
 
-    // Precargar imagen custom para el canvas
+    // Precargar imagen custom para el canvas (Image tab o Unsplash override en wallpaper tab)
+    const imageUrlToLoad = shouldShowCustomImage ? selectedImageUrl : shouldShowUnsplashOverride ? unsplashOverrideUrl : null;
     useEffect(() => {
-        if (shouldShowCustomImage && selectedImageUrl) {
+        if (imageUrlToLoad) {
             const img = new Image();
-            img.src = selectedImageUrl;
+            img.crossOrigin = "anonymous"; // Prevenir problemas de CORS al exportar
+            img.src = imageUrlToLoad;
             img.onload = () => {
                 customImageRef.current = img;
             };
         } else {
             customImageRef.current = null;
         }
-    }, [shouldShowCustomImage, selectedImageUrl]);
+    }, [imageUrlToLoad]);
 
     // Preload canvas element images (only for image elements, not SVGs)
     useEffect(() => {
@@ -189,6 +196,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                 const imageElement = element as ImageElement;
                 if (!cache.has(imageElement.imagePath)) {
                     const img = new Image();
+                    img.crossOrigin = "anonymous"; // Prevenir problemas de CORS al exportar
                     img.src = imageElement.imagePath;
                     img.onload = () => cache.set(imageElement.imagePath, img);
                 }
@@ -282,7 +290,11 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                     elementDragStart.current.x - centerX
                 ) * (180 / Math.PI);
 
-                const deltaAngle = currentAngle - startAngle;
+                // Normalize angle delta to -180 to +180 range
+                let deltaAngle = currentAngle - startAngle;
+                if (deltaAngle > 180) deltaAngle -= 360;
+                if (deltaAngle < -180) deltaAngle += 360;
+                
                 const newRotation = elementDragStart.current.initialRotation + deltaAngle;
 
                 onElementUpdate(selectedElementId, { rotation: newRotation });
@@ -317,6 +329,108 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             window.removeEventListener("mouseup", handleMouseUp);
         };
     }, [isDraggingElement, isDraggingElementRotation, selectedElementId, canvasElements, onElementUpdate]);
+
+    // Helper function to render canvas elements (SVG, images, text)
+    // If behindVideo is true, only render elements with zIndex < VIDEO_Z_INDEX
+    // If behindVideo is false, only render elements with zIndex >= VIDEO_Z_INDEX
+    const renderCanvasElements = async (
+        ctx: CanvasRenderingContext2D,
+        elements: typeof canvasElements,
+        canvasWidth: number,
+        canvasHeight: number,
+        behindVideo: boolean
+    ) => {
+        const filteredElements = elements.filter(el => 
+            behindVideo ? el.zIndex < VIDEO_Z_INDEX : el.zIndex >= VIDEO_Z_INDEX
+        );
+        const sortedElements = [...filteredElements].sort((a, b) => a.zIndex - b.zIndex);
+        const SVG_SCALE_FACTOR = 0.45;
+
+        for (const element of sortedElements) {
+            if (element.type === "svg") {
+                const svgElement = element as SvgElement;
+                const svgDataUrl = getSvgDataUrl(svgElement.svgId, svgElement.color || "#FFFFFF");
+                if (!svgDataUrl) continue;
+
+                const svgImage = new Image();
+                svgImage.src = svgDataUrl;
+
+                await new Promise<void>((resolve) => {
+                    if (svgImage.complete) {
+                        resolve();
+                    } else {
+                        svgImage.onload = () => resolve();
+                        svgImage.onerror = () => resolve();
+                    }
+                });
+
+                ctx.save();
+
+                const elemX = (svgElement.x / 100) * canvasWidth;
+                const elemY = (svgElement.y / 100) * canvasHeight;
+                const elemWidth = (svgElement.width / 100) * canvasWidth * SVG_SCALE_FACTOR;
+                const elemHeight = (svgElement.height / 100) * canvasWidth * SVG_SCALE_FACTOR;
+
+                ctx.translate(elemX, elemY);
+                ctx.rotate((svgElement.rotation * Math.PI) / 180);
+                ctx.globalAlpha = svgElement.opacity;
+
+                ctx.drawImage(
+                    svgImage,
+                    -elemWidth / 2,
+                    -elemHeight / 2,
+                    elemWidth,
+                    elemHeight
+                );
+
+                ctx.restore();
+            } else if (element.type === "image") {
+                const img = elementImagesRef.current.get(element.imagePath);
+                if (!img) continue;
+
+                ctx.save();
+
+                const elemX = (element.x / 100) * canvasWidth;
+                const elemY = (element.y / 100) * canvasHeight;
+                const elemWidth = (element.width / 100) * canvasWidth;
+                const elemHeight = (element.height / 100) * canvasWidth;
+
+                ctx.translate(elemX, elemY);
+                ctx.rotate((element.rotation * Math.PI) / 180);
+                ctx.globalAlpha = element.opacity;
+
+                ctx.drawImage(
+                    img,
+                    -elemWidth / 2,
+                    -elemHeight / 2,
+                    elemWidth,
+                    elemHeight
+                );
+
+                ctx.restore();
+            } else if (element.type === "text") {
+                ctx.save();
+
+                const elemX = (element.x / 100) * canvasWidth;
+                const elemY = (element.y / 100) * canvasHeight;
+
+                ctx.translate(elemX, elemY);
+                ctx.rotate((element.rotation * Math.PI) / 180);
+                ctx.globalAlpha = element.opacity;
+
+                const scaledFontSize = element.fontSize * (canvasWidth / 1080);
+                const fontWeight = element.fontWeight === 'normal' ? '400' : element.fontWeight === 'medium' ? '500' : '700';
+                ctx.font = `${fontWeight} ${scaledFontSize}px ${element.fontFamily}`;
+                ctx.fillStyle = element.color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillText(element.content, 0, 0);
+
+                ctx.restore();
+            }
+        }
+    };
 
     // Función para dibujar un frame en el canvas de exportación
     const drawFrame = async () => {
@@ -359,7 +473,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             ctx.translate(-centerX, -centerY);
         }
 
-        const backgroundImage = shouldShowCustomImage ? customImageRef.current : (shouldShowWallpaper ? wallpaperImageRef.current : null);
+        const backgroundImage = (shouldShowCustomImage || shouldShowUnsplashOverride) ? customImageRef.current : (shouldShowWallpaper ? wallpaperImageRef.current : null);
 
         // 1. Dibujar fondo
         if (shouldShowCustomColor && backgroundColorCss) {
@@ -384,7 +498,10 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             ctx.restore();
         }
 
-        // 2. Calcular área disponible para el mockup/video
+        // 2. Render elements BEHIND video (zIndex < VIDEO_Z_INDEX) - before video transform
+        await renderCanvasElements(ctx, canvasElements, canvasWidth, canvasHeight, true);
+
+        // 3. Calcular área disponible para el mockup/video
         const availableWidth = canvasWidth - scaledPaddingX * 2;
         const availableHeight = canvasHeight - scaledPaddingY * 2;
 
@@ -417,6 +534,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
         const containerX = scaledPaddingX + (availableWidth - containerWidth) / 2;
         const containerY = scaledPaddingY + (availableHeight - containerHeight) / 2;
 
+        // 4. Aplicar transformaciones del video (rotación y traslación)
         ctx.save();
 
         // Determinar el centro real del contenedor para rotar sobre su propio eje
@@ -432,7 +550,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
         ctx.rotate((videoTransform.rotation * Math.PI) / 180);
         ctx.translate(-centerX, -centerY);
 
-        // 3. Dibujar sombra del contenedor (ahora rotará y se moverá con todo lo demás)
+        // 5. Dibujar sombra del contenedor (ahora rotará y se moverá con todo lo demás)
         if (shadows > 0 && !SELF_SHADOWING_MOCKUPS.includes(mockupId)) {
             ctx.save();
             ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -445,7 +563,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             ctx.restore();
         }
 
-        // 4. Determinar si hay mockup activo y dibujarlo
+        // 6. Determinar si hay mockup activo y dibujarlo
         const hasMockup = mockupId && mockupId !== "none";
         const currentMockupConfig = mockupConfig || DEFAULT_MOCKUP_CONFIG;
 
@@ -476,7 +594,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             videoRadius = mockupId === "iphone-slim" ? scaledRadius * 1.8 : scaledRadius;
         }
 
-        // 5. Dibujar video con esquinas redondeadas
+        // 7. Dibujar video con esquinas redondeadas
         ctx.save();
         const needsBottomOnlyRadius = hasMockup && BOTTOM_ONLY_RADIUS_MOCKUPS.includes(mockupId);
 
@@ -508,105 +626,8 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
         ctx.restore();
         ctx.restore();
 
-        // 6. Render canvas elements (SVG, images, text)
-        // Elements are rendered after video but before zoom restore, so they're affected by zoom
-        const sortedElements = [...canvasElements].sort((a, b) => a.zIndex - b.zIndex);
-        const SVG_SCALE_FACTOR = 0.45;
-
-        for (const element of sortedElements) {
-            if (element.type === "svg") {
-                const svgElement = element as SvgElement;
-                // Get SVG as data URL  
-                const svgDataUrl = getSvgDataUrl(svgElement.svgId, svgElement.color || "#FFFFFF");
-                if (!svgDataUrl) continue;
-
-                // Create image from SVG data URL
-                const svgImage = new Image();
-                svgImage.src = svgDataUrl;
-
-                // Wait for image to load
-                await new Promise<void>((resolve) => {
-                    if (svgImage.complete) {
-                        resolve();
-                    } else {
-                        svgImage.onload = () => resolve();
-                        svgImage.onerror = () => resolve(); // Continue even if load fails
-                    }
-                });
-
-                ctx.save();
-
-                // Calculate element position and size in pixels (width and height are stored as percentage of canvas width for aspect ratio)
-                const elemX = (svgElement.x / 100) * canvasWidth;
-                const elemY = (svgElement.y / 100) * canvasHeight;
-                const elemWidth = (svgElement.width / 100) * canvasWidth * SVG_SCALE_FACTOR;
-                const elemHeight = (svgElement.height / 100) * canvasWidth * SVG_SCALE_FACTOR;
-
-                // Apply transform: translate to center, rotate, translate back
-                ctx.translate(elemX, elemY);
-                ctx.rotate((svgElement.rotation * Math.PI) / 180);
-                ctx.globalAlpha = svgElement.opacity;
-
-                // Draw the SVG
-                ctx.drawImage(
-                    svgImage,
-                    -elemWidth / 2,
-                    -elemHeight / 2,
-                    elemWidth,
-                    elemHeight
-                );
-
-                ctx.restore();
-            } else if (element.type === "image") {
-                const img = elementImagesRef.current.get(element.imagePath);
-                if (!img) continue;
-
-                ctx.save();
-
-                // Calculate element position and size in pixels (width and height are stored as percentage of canvas width for aspect ratio)
-                const elemX = (element.x / 100) * canvasWidth;
-                const elemY = (element.y / 100) * canvasHeight;
-                const elemWidth = (element.width / 100) * canvasWidth;
-                const elemHeight = (element.height / 100) * canvasWidth; // Use canvasWidth for square aspect ratio
-
-                ctx.translate(elemX, elemY);
-                ctx.rotate((element.rotation * Math.PI) / 180);
-                ctx.globalAlpha = element.opacity;
-
-                ctx.drawImage(
-                    img,
-                    -elemWidth / 2,
-                    -elemHeight / 2,
-                    elemWidth,
-                    elemHeight
-                );
-
-                ctx.restore();
-            } else if (element.type === "text") {
-                ctx.save();
-
-                const elemX = (element.x / 100) * canvasWidth;
-                const elemY = (element.y / 100) * canvasHeight;
-
-                ctx.translate(elemX, elemY);
-                ctx.rotate((element.rotation * Math.PI) / 180);
-                ctx.globalAlpha = element.opacity;
-
-                // Configure text style with scaled fontSize
-                // Scale fontSize proportionally to canvas width (reference: 1080px)
-                const scaledFontSize = element.fontSize * (canvasWidth / 1080);
-                const fontWeight = element.fontWeight === 'normal' ? '400' : element.fontWeight === 'medium' ? '500' : '700';
-                ctx.font = `${fontWeight} ${scaledFontSize}px ${element.fontFamily}`;
-                ctx.fillStyle = element.color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                // Draw text
-                ctx.fillText(element.content, 0, 0);
-
-                ctx.restore();
-            }
-        }
+        // 8. Render elements ABOVE video (zIndex >= VIDEO_Z_INDEX)
+        await renderCanvasElements(ctx, canvasElements, canvasWidth, canvasHeight, false);
 
         ctx.restore();
     };
@@ -656,10 +677,10 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                     backgroundColorCss.startsWith('#') || backgroundColorCss.startsWith('rgb')
                                         ? { backgroundColor: backgroundColorCss }
                                         : { backgroundImage: backgroundColorCss }
-                                    : shouldShowCustomImage
-                                        ? // Imagen personalizada
+                                    : (shouldShowCustomImage || shouldShowUnsplashOverride)
+                                        ? // Imagen personalizada o Unsplash override
                                         {
-                                            backgroundImage: `url('${selectedImageUrl}')`,
+                                            backgroundImage: `url('${shouldShowCustomImage ? selectedImageUrl : unsplashOverrideUrl}')`,
                                             backgroundSize: 'cover',
                                             backgroundPosition: 'center',
                                         }
@@ -678,10 +699,27 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                         />
                     </div>
 
-                    {/* Capa 2: Video con padding, esquinas redondeadas y sombras */}
+                    {/* Capa 2A: Canvas elements BEHIND video (zIndex < VIDEO_Z_INDEX) */}
+                    <CanvasElementsLayer
+                        canvasContainerRef={canvasContainerRef}
+                        canvasElements={canvasElements}
+                        selectedElementId={selectedElementId}
+                        hoveredElementId={hoveredElementId}
+                        isDraggingElement={isDraggingElement}
+                        behindVideo={true}
+                        onElementSelect={onElementSelect}
+                        onElementUpdate={onElementUpdate}
+                        setHoveredElementId={setHoveredElementId}
+                        setIsDraggingElement={setIsDraggingElement}
+                        setIsDraggingElementRotation={setIsDraggingElementRotation}
+                        elementDragStart={elementDragStart}
+                        layerZIndex={1}
+                    />
+
+                    {/* Capa 2B: Video con padding, esquinas redondeadas y sombras */}
                     <div
                         className="absolute inset-0 flex items-center justify-center transition-all duration-200"
-                        style={{ padding: `${padding * 0.5}%` }}
+                        style={{ padding: `${padding * 0.5}%`, zIndex: 2, pointerEvents: 'none' }}
                     >
                         <div
                             ref={videoContainerRef}
@@ -690,6 +728,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                 transform: `translate(${videoTransform.translateX}%, ${videoTransform.translateY}%) rotate(${videoTransform.rotation}deg)`,
                                 cursor: isDraggingVideo ? 'move' : (isVideoHovered && videoUrl ? 'move' : 'default'),
                                 transition: isDraggingVideo || isDraggingRotation ? 'none' : 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                                pointerEvents: 'auto',
                             }}
                             onMouseEnter={() => videoUrl && setIsVideoHovered(true)}
                             onMouseLeave={() => setIsVideoHovered(false)}
@@ -790,21 +829,84 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                 </MockupWrapper>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Capa 3: Canvas elements overlay */}
-                        <div
-                            ref={canvasContainerRef}
-                            className="absolute inset-0 pointer-events-none"
-                            onClick={(e) => {
-                                // Deselect element if clicking on background (not on an element)
-                                if (e.target === e.currentTarget && onElementSelect) {
-                                    onElementSelect(null);
-                                }
-                            }}
-                            style={{ pointerEvents: 'auto' }}
-                        >
-                            {/* Sort elements by zIndex for proper layering */}
-                            {[...canvasElements].sort((a, b) => a.zIndex - b.zIndex).map((element) => {
+                    {/* Capa 3: Canvas elements ABOVE video (zIndex >= VIDEO_Z_INDEX) */}
+                    <CanvasElementsLayer
+                    canvasContainerRef={canvasContainerRef}
+                        canvasElements={canvasElements}
+                        selectedElementId={selectedElementId}
+                        hoveredElementId={hoveredElementId}
+                        isDraggingElement={isDraggingElement}
+                        behindVideo={false}
+                        onElementSelect={onElementSelect}
+                        onElementUpdate={onElementUpdate}
+                        setHoveredElementId={setHoveredElementId}
+                        setIsDraggingElement={setIsDraggingElement}
+                        setIsDraggingElementRotation={setIsDraggingElementRotation}
+                        elementDragStart={elementDragStart}
+                        layerZIndex={3}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+});
+
+{/* Canvas Elements Layer Component - renders elements either behind or above video */}
+function CanvasElementsLayer({
+      canvasContainerRef, 
+    canvasElements,
+    selectedElementId,
+    hoveredElementId,
+    isDraggingElement,
+    behindVideo,
+    onElementSelect,
+    onElementUpdate,
+    setHoveredElementId,
+    setIsDraggingElement,
+    setIsDraggingElementRotation,
+    elementDragStart,
+    layerZIndex,
+}: {
+     canvasContainerRef?: React.RefObject<HTMLDivElement | null>;
+    canvasElements: CanvasElement[];
+    selectedElementId: string | null;
+    hoveredElementId: string | null;
+    isDraggingElement: boolean;
+    behindVideo: boolean;
+    onElementSelect?: (id: string | null) => void;
+    onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
+    setHoveredElementId: (id: string | null) => void;
+    setIsDraggingElement: (dragging: boolean) => void;
+    setIsDraggingElementRotation: (dragging: boolean) => void;
+    elementDragStart: React.MutableRefObject<{ x: number; y: number; initialX: number; initialY: number; initialRotation: number }>;
+    layerZIndex: number;
+}) {
+    // Filter elements based on whether they should be behind or above video
+    const filteredElements = canvasElements.filter(element =>
+        behindVideo ? element.zIndex < VIDEO_Z_INDEX : element.zIndex >= VIDEO_Z_INDEX
+    );
+
+    // If no elements to render, return empty div (but still set ref if provided)
+    if (filteredElements.length === 0) {
+        return <div ref={canvasContainerRef} className="absolute inset-0 pointer-events-none" style={{ zIndex: layerZIndex }} />;
+    }
+
+    return (
+        <div
+        ref={canvasContainerRef}  
+            className="absolute inset-0"
+            onClick={(e) => {
+                // Deselect element if clicking on background (not on an element)
+                if (e.target === e.currentTarget && onElementSelect) {
+                    onElementSelect(null);
+                }
+            }}
+            style={{ zIndex: layerZIndex, pointerEvents: 'none' }}
+        >
+            {/* Sort elements by zIndex for proper layering */}
+            {[...filteredElements].sort((a, b) => a.zIndex - b.zIndex).map((element) => {
                                 const isSelected = selectedElementId === element.id;
                                 const isHovered = hoveredElementId === element.id;
 
@@ -1059,12 +1161,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                 }
 
                                 return null;
-                                return null;
                             })}
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     );
-});
+}

@@ -32,7 +32,6 @@ export function MacosContainerGlassMockup({
                 borderLeft: "1px solid rgba(255,255,255,0.6)",
             }}
         >
-            {/* Mini header con tres puntos escalables */}
             <div
                 className="flex items-center shrink-0"
                 style={{
@@ -58,7 +57,6 @@ export function MacosContainerGlassMockup({
                 </div>
             </div>
 
-            {/* Contenido */}
             <div
                 className="flex-1 relative overflow-hidden"
                 style={{

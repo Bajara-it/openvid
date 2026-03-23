@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de VS Code en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import {
@@ -14,9 +10,6 @@ import {
 import type { MockupCanvasContext, MockupDrawResult } from "./types";
 import { drawRoundedRectPath, drawMockupShadow } from "./shared";
 
-/**
- * Dibuja el mockup de VS Code en canvas
- */
 export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult {
     const { ctx, x, y, width, height, config, cornerRadius, shadowBlur } = context;
     const isDark = config.darkMode;
@@ -24,10 +17,8 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     const url = config.url || "openvid";
     const headerOpacity = config.headerOpacity ?? 100;
 
-    // Escalado proporcional del header
     const headerScale = (config.headerScale || 100) / 100;
 
-    // Valores base escalados
     const headerHeight = 35 * headerScale;
     const logoSize = 16 * headerScale;
     const menuFontSize = 14 * headerScale;
@@ -37,16 +28,13 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     const controlIconSize = 12 * headerScale;
     const controlPaddingX = 12 * headerScale;
 
-    // Colores
     const bgColor = isDark ? "#1e1e1e" : "#f3f3f3";
     const borderColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)";
     const textColor = isDark ? "#cccccc" : "#333333";
     const searchBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
-    // 0. Dibujar sombra exterior del mockup (sin bloquear el fondo)
     drawMockupShadow(ctx, x, y, width, height, cornerRadius, shadowBlur);
 
-    // 1. Dibujar borde del frame
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, cornerRadius);
     ctx.strokeStyle = isDark ? '#404040' : '#d4d4d4';
@@ -54,7 +42,6 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     ctx.stroke();
     ctx.restore();
 
-    // Dibujar fondo solo en área de contenido con esquinas redondeadas
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x, y + headerHeight);
@@ -68,7 +55,6 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     ctx.fill();
     ctx.restore();
 
-    // 2. Dibujar header
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x + cornerRadius, y);
@@ -83,7 +69,6 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     ctx.fill();
     ctx.restore();
 
-    // 3. Dibujar borde inferior del header
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -93,11 +78,9 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     ctx.stroke();
     ctx.restore();
 
-    // 4. Dibujar logo de VS Code real
     const logoY = y + (headerHeight - logoSize) / 2;
     drawVSCodeLogo(ctx, x + headerPaddingX, logoY, logoSize);
 
-    // 5. Dibujar items de menú
     const menuItems = ["File", "Edit", "Selection", "View", "Go", "Terminal", "Help"];
     let menuX = x + headerPaddingX + logoSize + 8 * headerScale;
     const menuY = y + headerHeight / 2;
@@ -114,13 +97,11 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     });
     ctx.restore();
 
-    // 6. Dibujar search bar centrada con icono de lupa
     const maxSearchWidth = 576 * headerScale; // Equivale a max-w-xl
     const searchWidth = Math.min(width * 0.5, maxSearchWidth);
     const searchX = x + (width - searchWidth) / 2;
     const searchY = y + (headerHeight - searchHeight) / 2;
 
-    // Usar la misma lógica que el componente React: derivar el color del search bar
     const searchBgBase = deriveSearchBg(frameColor);
 
     ctx.save();
@@ -132,12 +113,10 @@ export function drawVSCodeMockup(context: MockupCanvasContext): MockupDrawResult
     ctx.stroke();
     ctx.restore();
 
-    // Icono de lupa en el search bar
     const searchIconSize = searchHeight * 0.6;
     const searchIconPadding = 8 * headerScale;
     drawMagnifyIcon(ctx, searchX + searchIconPadding, searchY + (searchHeight - searchIconSize) / 2, searchIconSize, textColor + "80");
 
-    // Texto del search
     ctx.save();
     ctx.font = `${searchFontSize}px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     ctx.fillStyle = textColor;

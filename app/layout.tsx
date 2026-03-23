@@ -37,7 +37,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Freeshot - Crea tomas cinemáticas",
+  title: "openvid - Crea tomas cinemáticas",
   description: "Genera tomas cinematográficas con facilidad",
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230E0E12' stroke='%233B82F6' stroke-width='2'/><circle cx='16' cy='16' r='6' fill='%233B82F6'/></svg>",

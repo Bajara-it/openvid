@@ -24,14 +24,12 @@ export interface ZoomStateCanvas {
     focusY: number;
 }
 
-// This handles entry/exit transitions professionally
 export interface ZoomState {
     scale: number;
     focusX: number;
     focusY: number;
 }
 
-// Default values for new zoom fragments
 const DEFAULT_ZOOM_LEVEL = 1.5;   // 2x zoom
 const DEFAULT_ZOOM_SPEED = 4;   // Medium speed
 

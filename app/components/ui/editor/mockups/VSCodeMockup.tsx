@@ -45,7 +45,6 @@ export function VSCodeMockup({
     const textColor = isDark ? "#cccccc" : "#333333";
     const searchBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
-    // Search bar bg always derived from the current frameColor
     const searchBgBase = deriveSearchBg(frameColor);
 
     return (
@@ -72,7 +71,6 @@ export function VSCodeMockup({
                     color: textColor,
                 }}
             >
-                {/* Left: Logo + Menu */}
                 <div className="flex items-center" style={{ gap: `${menuGap}px` }}>
                     <Icon
                         icon="vscode-icons:file-type-vscode"
@@ -94,9 +92,8 @@ export function VSCodeMockup({
                     </div>
                 </div>
 
-                {/* Center: Search bar — bg tracks frameColor */}
                 <div
-                    className="flex-1 flex justify-center max-w-[400px]"
+                    className="flex-1 flex justify-center max-w-100"
                     style={{ padding: `0 ${headerPaddingX}px` }}
                 >
                     <div
@@ -105,7 +102,6 @@ export function VSCodeMockup({
                             height: `${searchHeight}px`,
                             gap: `${searchGap}px`,
                             padding: `0 ${searchPaddingX}px`,
-                            // Use derived color instead of hardcoded dark/light values
                             backgroundColor: hexToRgba(searchBgBase, headerOpacity),
                             border: `1px solid ${searchBorder}`,
                         }}
@@ -124,7 +120,6 @@ export function VSCodeMockup({
                     </div>
                 </div>
 
-                {/* Right: Window controls */}
                 <div className="flex items-center h-full">
                     {[
                         { icon: "mdi:minus", extra: "" },

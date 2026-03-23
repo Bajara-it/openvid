@@ -9,9 +9,10 @@ import { useEffect, useState } from "react";
 interface EditorTopBarProps {
     onExport: (quality: ExportQuality) => void;
     exportProgress: ExportProgress;
+    hasTransparentBackground?: boolean;
 }
 
-export function EditorTopBar({ onExport, exportProgress }: EditorTopBarProps) {
+export function EditorTopBar({ onExport, exportProgress, hasTransparentBackground }: EditorTopBarProps) {
     const [showAlert, setShowAlert] = useState(false);
     const [prevStatus, setPrevStatus] = useState<string>(exportProgress.status);
 
@@ -76,7 +77,7 @@ export function EditorTopBar({ onExport, exportProgress }: EditorTopBarProps) {
                         <Icon icon="mdi:redo" width="20" />
                     </button>
                 </div>
-                <ExportDropdown onExport={onExport} exportProgress={exportProgress} />
+                <ExportDropdown onExport={onExport} exportProgress={exportProgress}  hasTransparentBackground={hasTransparentBackground}/>
             </div>
         </div>
     );

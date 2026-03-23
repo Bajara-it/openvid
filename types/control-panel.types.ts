@@ -3,6 +3,7 @@ import { BackgroundColorConfig } from "./background.types";
 import { ZoomFragment } from "./zoom.types";
 import { MockupConfig } from "./mockup.types";
 import type { CanvasElement } from "./canvas-elements.types";
+import type { UploadedAudio, AudioTrack } from "./audio.types";
 
 export interface ControlPanelProps {
     activeTool: Tool;
@@ -49,4 +50,18 @@ export interface ControlPanelProps {
     onDeleteCanvasElement?: (id: string) => void;
     onBringToFront?: (id: string) => void;
     onSendToBack?: (id: string) => void;
+    // Audio props
+    uploadedAudios?: UploadedAudio[];
+    audioTracks?: AudioTrack[];
+    muteOriginalAudio?: boolean;
+    masterVolume?: number;
+    onAudioUpload?: (file: File) => void;
+    onAudioDelete?: (audioId: string) => void;
+    onAddAudioTrack?: (audioId: string) => void;
+    onUpdateAudioTrack?: (trackId: string, updates: Partial<AudioTrack>) => void;
+    onDeleteAudioTrack?: (trackId: string) => void;
+    onToggleMuteOriginalAudio?: () => void;
+    onMasterVolumeChange?: (volume: number) => void;
+    videoDuration?: number;
+    videoHasAudioTrack?: boolean;
 }

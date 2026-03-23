@@ -1,10 +1,3 @@
-/**
- * Iconos de estado del sistema para Canvas 2D (WiFi, señal, batería)
- */
-
-/**
- * Dibuja un icono de WiFi
- */
 export function drawWifiIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -14,13 +7,11 @@ export function drawWifiIcon(ctx: CanvasRenderingContext2D, x: number, y: number
     const centerX = x + s * 0.5;
     const centerY = y + s * 0.7;
     
-    // Punto central
     ctx.beginPath();
     ctx.arc(centerX, centerY, s * 0.06, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
     
-    // Arcos de señal
     const arcs = [0.2, 0.35, 0.5];
     arcs.forEach(radius => {
         ctx.beginPath();
@@ -31,9 +22,6 @@ export function drawWifiIcon(ctx: CanvasRenderingContext2D, x: number, y: number
     ctx.restore();
 }
 
-/**
- * Dibuja barras de señal celular
- */
 export function drawSignalBars(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.fillStyle = color;
@@ -42,7 +30,6 @@ export function drawSignalBars(ctx: CanvasRenderingContext2D, x: number, y: numb
     const gap = s * 0.08;
     const heights = [0.3, 0.5, 0.7, 1.0];
     
-    // Helper para dibujar rectángulos con esquinas redondeadas
     const drawRoundedRectPath = (x: number, y: number, width: number, height: number, radius: number) => {
         const r = Math.min(radius, width / 2, height / 2);
         ctx.beginPath();
@@ -75,7 +62,6 @@ export function drawSignalBars(ctx: CanvasRenderingContext2D, x: number, y: numb
 export function drawBattery(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: string, fillPercent: number = 0.9) {
     ctx.save();
     
-    // Helper para dibujar rectángulos con esquinas redondeadas
     const drawRoundedRectPath = (x: number, y: number, width: number, height: number, radius: number) => {
         const r = Math.min(radius, width / 2, height / 2);
         ctx.beginPath();
@@ -91,20 +77,17 @@ export function drawBattery(ctx: CanvasRenderingContext2D, x: number, y: number,
         ctx.closePath();
     };
     
-    // Borde de la batería
     ctx.strokeStyle = color + "80";
     ctx.lineWidth = 1;
     drawRoundedRectPath(x, y, width, height, 2);
     ctx.stroke();
     
-    // Relleno de la batería
     ctx.fillStyle = color;
     const padding = 1.5;
     const fillWidth = (width - padding * 2) * fillPercent;
     drawRoundedRectPath(x + padding, y + padding, fillWidth, height - padding * 2, 1);
     ctx.fill();
     
-    // Tapa de la batería
     ctx.fillStyle = color + "50";
     const capWidth = 2;
     const capHeight = height * 0.4;

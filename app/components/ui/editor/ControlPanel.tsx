@@ -8,7 +8,7 @@ import type { ControlPanelProps } from "@/types/control-panel.types";
 import Link from "next/link";
 import Image from "next/image";
 import { lazy, Suspense } from "react";
-import { LoadingSpinner } from "../LoadingSpinner";
+import { ElementsMenuSkeleton, ZoomGlobalConfigSkeleton, MockupMenuSkeleton, WallpaperSkeleton, BackgroundColorSkeleton, ImageBackgroundSkeleton, ZoomFragmentEditorSkeleton } from "../Skeleton";
 import { ElementsMenu } from "./ElementsMenu";
 
 // Lazy load heavy components - only load when needed
@@ -19,6 +19,7 @@ const ZoomGlobalConfig = lazy(() => import("./ZoomGlobalConfig").then(mod => ({ 
 const OptionsGrid = lazy(() => import("../WalpaperSections").then(mod => ({ default: mod.OptionsGrid })));
 const WallpaperCatalogGrid = lazy(() => import("../WalpaperSections").then(mod => ({ default: mod.WallpaperCatalogGrid })));
 const MockupMenu = lazy(() => import("./MockupMenu").then(mod => ({ default: mod.MockupMenu })));
+const AudioMenu = lazy(() => import("./AudioMenu").then(mod => ({ default: mod.AudioMenu })));
 
 interface ExtendedControlPanelProps extends ControlPanelProps {
     onTogglePanel?: () => void;
@@ -70,6 +71,20 @@ export function ControlPanel({
     onDeleteCanvasElement,
     onBringToFront,
     onSendToBack,
+    // Audio props
+    uploadedAudios = [],
+    audioTracks = [],
+    muteOriginalAudio = false,
+    masterVolume = 1,
+    onAudioUpload,
+    onAudioDelete,
+    onAddAudioTrack,
+    onUpdateAudioTrack,
+    onDeleteAudioTrack,
+    onToggleMuteOriginalAudio,
+    onMasterVolumeChange,
+    videoDuration = 0,
+    videoHasAudioTrack = true,
 }: ExtendedControlPanelProps) {
     return (
         <div className="relative w-[320px] h-screen bg-[#141417] border-r border-white/10 flex flex-col shrink-0">
@@ -132,28 +147,34 @@ export function ControlPanel({
 
                         <div className="p-4 flex flex-col gap-6 pb-12">
                             {backgroundTab === "wallpaper" && (
-                                <Suspense fallback={<LoadingSpinner message="Cargando wallpapers..." />}>
+                                <Suspense fallback={<WallpaperSkeleton />}>
                                     <div className="flex flex-col gap-5">
                                         <div>
-                                            <div className="text-[10px] uppercase tracking-widesttext-white/60 font-bold mb-2 flex items-center gap-1.5">
+                                            <div className="text-[10px] uppercase tracking-widest text-white/60 font-bold mb-2 flex items-center gap-1.5">
                                                 <span>Opciones</span>
                                             </div>
                                             <OptionsGrid
                                                 selectedIndex={selectedWallpaper}
                                                 onSelect={onWallpaperSelect}
+                                                onUnsplashSelect={(url) => {
+                                                    onImageSelect?.(url);
+                                                }}
                                             />
                                         </div>
 
                                         <WallpaperCatalogGrid
                                             selectedIndex={selectedWallpaper}
                                             onSelect={onWallpaperSelect}
+                                            onUnsplashSelect={(url) => {
+                                                onImageSelect?.(url);
+                                            }}
                                         />
                                     </div>
                                 </Suspense>
                             )}
 
                             {backgroundTab === "image" && (
-                                <Suspense fallback={<LoadingSpinner message="Cargando editor de imágenes..." />}>
+                                <Suspense fallback={<ImageBackgroundSkeleton />}>
                                     <ImageRecentBackgroundGrid
                                         images={uploadedImages}
                                         selectedUrl={selectedImageUrl}
@@ -165,7 +186,7 @@ export function ControlPanel({
                             )}
 
                             {backgroundTab === "color" && (
-                                <Suspense fallback={<LoadingSpinner message="Cargando editor de color..." />}>
+                                <Suspense fallback={<BackgroundColorSkeleton />}>
                                     <BackgroundColorEditor
                                         value={backgroundColorConfig}
                                         onChange={onBackgroundColorChange}
@@ -213,53 +234,68 @@ export function ControlPanel({
                 )}
 
                 {activeTool === "elements" && (
-                    <ElementsMenu 
-                        onAddElement={onAddCanvasElement || (() => {})} 
-                        selectedElement={selectedCanvasElement}
-                        onUpdateElement={onUpdateCanvasElement}
-                        onDeleteElement={onDeleteCanvasElement}
-                        onBringToFront={onBringToFront}
-                        onSendToBack={onSendToBack}
-                    />
-                )}
-
-                {activeTool === "audio" && (
-                    <div className="p-4 flex flex-col gap-6">
-                        <div className="flex items-center gap-2 text-white font-medium">
-                            <Icon icon="mdi:volume-high" width="20" />
-                            <span>Audio</span>
-                        </div>
-                        <SliderControl icon="mdi:volume-medium" label="Volumen" value={80} />
-                        <SliderControl icon="mdi:tune" label="Amplificación de graves" value={30} />
-                    </div>
-                )}
-
-                {activeTool === "zoom" && (
-                    <Suspense fallback={<LoadingSpinner message="Cargando editor de zoom..." />}>
-                        {selectedZoomFragment ? (
-                            <ZoomFragmentEditor
-                                fragment={selectedZoomFragment}
-                                videoUrl={videoUrl ?? null}
-                                videoThumbnail={videoThumbnail}
-                                currentTime={currentTime}
-                                getThumbnailForTime={getThumbnailForTime}
-                                videoDimensions={videoDimensions}
-                                onBack={() => onSelectZoomFragment?.(null)}
-                                onDelete={() => onDeleteZoomFragment?.(selectedZoomFragment.id)}
-                                onUpdate={(updates) => onUpdateZoomFragment?.(selectedZoomFragment.id, updates)}
-                            />
-                        ) : (
-                            <ZoomGlobalConfig
-                                fragments={zoomFragments}
-                                onSelectFragment={(id) => onSelectZoomFragment?.(id)}
-                                onAddFragment={() => onAddZoomFragment?.()}
-                            />
-                        )}
+                    <Suspense fallback={<ElementsMenuSkeleton />}>
+                        <ElementsMenu
+                            onAddElement={onAddCanvasElement || (() => { })}
+                            selectedElement={selectedCanvasElement}
+                            onUpdateElement={onUpdateCanvasElement}
+                            onDeleteElement={onDeleteCanvasElement}
+                            onBringToFront={onBringToFront}
+                            onSendToBack={onSendToBack}
+                        />
                     </Suspense>
                 )}
 
+                {activeTool === "audio" && (
+                    <Suspense fallback={<ElementsMenuSkeleton />}>
+                        <AudioMenu
+                            uploadedAudios={uploadedAudios}
+                            audioTracks={audioTracks}
+                            muteOriginalAudio={muteOriginalAudio}
+                            masterVolume={masterVolume}
+                            videoDuration={videoDuration}
+                            onAudioUpload={onAudioUpload || (() => { })}
+                            onAudioDelete={onAudioDelete || (() => { })}
+                            onAddAudioTrack={onAddAudioTrack || (() => { })}
+                            onUpdateAudioTrack={onUpdateAudioTrack || (() => { })}
+                            onDeleteAudioTrack={onDeleteAudioTrack || (() => { })}
+                            onToggleMuteOriginalAudio={onToggleMuteOriginalAudio || (() => { })}
+                            onMasterVolumeChange={onMasterVolumeChange || (() => { })}
+                            videoHasAudioTrack={videoHasAudioTrack}
+                        />
+                    </Suspense>
+                )}
+
+                {activeTool === "zoom" && (
+                    <>
+                        {selectedZoomFragment ? (
+                            <Suspense fallback={<ZoomFragmentEditorSkeleton />}>
+                                <ZoomFragmentEditor
+                                    fragment={selectedZoomFragment}
+                                    videoUrl={videoUrl ?? null}
+                                    videoThumbnail={videoThumbnail}
+                                    currentTime={currentTime}
+                                    getThumbnailForTime={getThumbnailForTime}
+                                    videoDimensions={videoDimensions}
+                                    onBack={() => onSelectZoomFragment?.(null)}
+                                    onDelete={() => onDeleteZoomFragment?.(selectedZoomFragment.id)}
+                                    onUpdate={(updates) => onUpdateZoomFragment?.(selectedZoomFragment.id, updates)}
+                                />
+                            </Suspense>
+                        ) : (
+                            <Suspense fallback={<ZoomGlobalConfigSkeleton />}>
+                                <ZoomGlobalConfig
+                                    fragments={zoomFragments}
+                                    onSelectFragment={(id) => onSelectZoomFragment?.(id)}
+                                    onAddFragment={() => onAddZoomFragment?.()}
+                                />
+                            </Suspense>
+                        )}
+                    </>
+                )}
+
                 {activeTool === "mockup" && (
-                    <Suspense fallback={<LoadingSpinner message="Cargando mockups..." />}>
+                    <Suspense fallback={<MockupMenuSkeleton />}>
                         <MockupMenu
                             mockupId={mockupId}
                             mockupConfig={mockupConfig}

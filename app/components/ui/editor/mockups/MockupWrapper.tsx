@@ -35,7 +35,6 @@ export function MockupWrapper({
     shadows = 20,
     className = "",
 }: MockupWrapperProps) {
-    // Renderiza el mockup correcto según el ID
     switch (mockupId) {
         case "none":
             return (
@@ -222,7 +221,6 @@ export function MockupWrapper({
                 </MacosGhostIdeMockup>
             );
 
-        // Fallback al mockup "none"
         default:
             return (
                 <NoneMockup

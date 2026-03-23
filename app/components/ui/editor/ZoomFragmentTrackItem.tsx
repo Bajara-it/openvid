@@ -37,7 +37,6 @@ export function ZoomFragmentTrackItem({
     const [isResizing, setIsResizing] = useState<'start' | 'end' | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Motion values for smooth animations
     const fragmentX = useMotionValue(0);
     const fragmentWidth = useMotionValue(0);
 
@@ -59,7 +58,6 @@ export function ZoomFragmentTrackItem({
         }
     }, [initialLeft, initialWidth, isDragging, isResizing, fragmentX, fragmentWidth]);
 
-    // Find boundaries - can't overlap with other fragments
     const boundaries = useMemo(() => {
         const sorted = [...otherFragments].sort((a, b) => a.startTime - b.startTime);
 
@@ -79,7 +77,6 @@ export function ZoomFragmentTrackItem({
         return { minStart, maxEnd };
     }, [otherFragments, fragment.startTime, fragment.endTime, videoDuration]);
 
-    // Handle drag (move entire fragment)
     const handleDrag = useCallback((e: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
         if (contentWidth === 0 || videoDuration === 0) return;
 
@@ -113,7 +110,6 @@ export function ZoomFragmentTrackItem({
         });
     }, [fragmentX, pixelsToTime, fragment, videoDuration, onUpdate, onDragStateChange]);
 
-    // Handle resize from start
     const handleResizeStartDrag = useCallback((e: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
         if (contentWidth === 0 || videoDuration === 0) return;
 
@@ -129,7 +125,6 @@ export function ZoomFragmentTrackItem({
             newX = currentX + currentWidth - minWidth;
         }
 
-        // Clamp to boundaries (can't go before minStart)
         const minX = timeToPixels(boundaries.minStart);
         if (newX < minX) {
             const diff = minX - newX;
@@ -141,20 +136,16 @@ export function ZoomFragmentTrackItem({
         fragmentWidth.set(newWidth);
     }, [contentWidth, videoDuration, fragmentX, fragmentWidth, boundaries, timeToPixels]);
 
-    // Handle resize from end
     const handleResizeEndDrag = useCallback((e: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
         if (contentWidth === 0 || videoDuration === 0) return;
 
         const currentWidth = fragmentWidth.get();
 
-        // Calculate new width
         let newWidth = currentWidth + info.delta.x;
 
-        // Enforce minimum duration
         const minWidth = timeToPixels(MIN_FRAGMENT_DURATION);
         newWidth = Math.max(minWidth, newWidth);
 
-        // Clamp to boundaries (can't go past maxEnd)
         const currentX = fragmentX.get();
         const maxWidth = timeToPixels(boundaries.maxEnd) - currentX;
         newWidth = Math.min(newWidth, maxWidth);
@@ -171,7 +162,6 @@ export function ZoomFragmentTrackItem({
         setIsResizing(null);
         onDragStateChange?.(false);
 
-        // Update fragment with new bounds
         const newStartTime = pixelsToTime(fragmentX.get());
         const newEndTime = pixelsToTime(fragmentX.get() + fragmentWidth.get());
 
@@ -275,7 +265,6 @@ export function canAddFragmentAt(
     for (const fragment of existingFragments) {
         if (excludeFragmentId && fragment.id === excludeFragmentId) continue;
 
-        // Check for overlap
         const overlaps = startTime < fragment.endTime && endTime > fragment.startTime;
         if (overlaps) return false;
     }
@@ -292,19 +281,16 @@ function findAllGaps(
     const sorted = [...existingFragments].sort((a, b) => a.startTime - b.startTime);
 
     if (sorted.length === 0) {
-        // No fragments, entire video is available
         if (videoDuration >= minDuration) {
             gaps.push({ start: 0, end: videoDuration });
         }
         return gaps;
     }
 
-    // Gap before first fragment
     if (sorted[0].startTime >= minDuration) {
         gaps.push({ start: 0, end: sorted[0].startTime });
     }
 
-    // Gaps between fragments
     for (let i = 0; i < sorted.length - 1; i++) {
         const gapStart = sorted[i].endTime;
         const gapEnd = sorted[i + 1].startTime;
@@ -313,7 +299,6 @@ function findAllGaps(
         }
     }
 
-    // Gap after last fragment
     const lastEnd = sorted[sorted.length - 1].endTime;
     if (videoDuration - lastEnd >= minDuration) {
         gaps.push({ start: lastEnd, end: videoDuration });
@@ -329,22 +314,18 @@ export function findValidFragmentPosition(
     existingFragments: ZoomFragment[],
     videoDuration: number
 ): { startTime: number; endTime: number } | null {
-    // Find all available gaps
     const gaps = findAllGaps(existingFragments, videoDuration, defaultDuration);
 
     if (gaps.length === 0) {
         return null; // No space available
     }
 
-    // First, check if click position is inside any gap
     for (const gap of gaps) {
         if (clickTime >= gap.start && clickTime <= gap.end) {
-            // Click is in this gap - place fragment centered on click (or adjusted to fit)
             const halfDuration = defaultDuration / 2;
             let startTime = clickTime - halfDuration;
             let endTime = clickTime + halfDuration;
 
-            // Adjust to fit within gap
             if (startTime < gap.start) {
                 startTime = gap.start;
                 endTime = startTime + defaultDuration;
@@ -358,16 +339,12 @@ export function findValidFragmentPosition(
         }
     }
 
-    // Click is not in any gap (probably on a fragment) - find closest gap
     let closestGap = gaps[0];
     let closestDistance = Infinity;
 
     for (const gap of gaps) {
-        // Distance to gap start
         const distToStart = Math.abs(clickTime - gap.start);
-        // Distance to gap end
         const distToEnd = Math.abs(clickTime - gap.end);
-        // Distance to gap center
         const gapCenter = (gap.start + gap.end) / 2;
         const distToCenter = Math.abs(clickTime - gapCenter);
 
@@ -379,15 +356,12 @@ export function findValidFragmentPosition(
         }
     }
 
-    // Place fragment at the edge closest to click
     if (clickTime <= closestGap.start) {
-        // Click is before gap - place at start of gap
         return {
             startTime: closestGap.start,
             endTime: closestGap.start + defaultDuration,
         };
     } else if (clickTime >= closestGap.end) {
-        // Click is after gap - place at end of gap
         return {
             startTime: closestGap.end - defaultDuration,
             endTime: closestGap.end,

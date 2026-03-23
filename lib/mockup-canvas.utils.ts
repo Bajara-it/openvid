@@ -1,8 +1,3 @@
-/**
- * Utilidades para dibujar mockups en Canvas 2D
- * Funciones principales de orquestación
- */
-
 import type { MockupConfig } from "@/types/mockup.types";
 import {
     type MockupDrawResult,
@@ -34,10 +29,6 @@ interface MockupCanvasContext {
     shadowBlur: number;
 }
 
-/**
- * Función principal que dibuja el mockup correspondiente en el canvas
- * y devuelve el área donde debe ir el contenido del video
- */
 export function drawMockupToCanvas(
     ctx: CanvasRenderingContext2D,
     mockupId: string,

@@ -1,8 +1,3 @@
-/**
- * Hook for handling video uploads
- * Manages both file selection and video caching
- */
-
 import { useCallback, useState } from "react";
 import { saveUploadedVideo, getUploadedVideo, deleteUploadedVideo } from "@/lib/video-upload-cache";
 import type { AspectRatio } from "@/types";
@@ -28,9 +23,6 @@ interface UseVideoUploadReturn {
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"];
 
-/**
- * Convert aspect ratio string to AspectRatio type
- */
 function mapAspectRatio(ratio: string): AspectRatio {
     switch (ratio) {
         case "16:9": return "16:9";
@@ -51,20 +43,16 @@ export function useVideoUpload(): UseVideoUploadReturn {
         setUploadError(null);
 
         try {
-            // Validate file type
             if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
                 throw new Error("Formato de video no soportado. Use MP4, WebM o MOV.");
             }
 
-            // Validate file size
             if (file.size > MAX_VIDEO_SIZE) {
                 throw new Error("El video es demasiado grande. Máximo 500MB.");
             }
 
-            // Save to cache (this replaces any existing video)
             const cachedVideo = await saveUploadedVideo(file);
 
-            // Create object URL for playback
             const url = URL.createObjectURL(cachedVideo.blob);
             const videoId = `uploaded-${Date.now()}`;
 
@@ -95,7 +83,6 @@ export function useVideoUpload(): UseVideoUploadReturn {
                 return null;
             }
 
-            // Create object URL from cached blob
             const url = URL.createObjectURL(cachedVideo.blob);
             const videoId = `uploaded-${cachedVideo.uploadedAt}`;
 

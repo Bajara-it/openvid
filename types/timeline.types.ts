@@ -1,4 +1,5 @@
 import { ZoomFragment } from "./zoom.types";
+import type { AudioTrack, UploadedAudio } from "./audio.types";
 
 export interface TrimRange {
     start: number;
@@ -23,4 +24,10 @@ export interface TimelineProps {
     onAddZoomFragment?: (startTime: number) => void;
     onUpdateZoomFragment?: (fragmentId: string, updates: Partial<ZoomFragment>) => void;
     onActivateZoomTool?: () => void;
+    // Audio props
+    audioTracks?: AudioTrack[];
+    uploadedAudios?: UploadedAudio[];
+    selectedAudioTrackId?: string | null;
+    onSelectAudioTrack?: (trackId: string | null) => void;
+    onUpdateAudioTrack?: (trackId: string, updates: Partial<AudioTrack>) => void;
 }

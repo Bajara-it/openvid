@@ -12,9 +12,10 @@ interface ExportProgress {
 interface ExportOverlayProps {
     exportProgress: ExportProgress;
     onCancel: () => void;
+    isTransparentExport?: boolean;
 }
 
-export function ExportOverlay({ exportProgress, onCancel }: ExportOverlayProps) {
+export function ExportOverlay({ exportProgress, onCancel, isTransparentExport }: ExportOverlayProps) {
     const isExporting = exportProgress.status !== "idle" &&
         exportProgress.status !== "complete" &&
         exportProgress.status !== "error";
@@ -50,13 +51,14 @@ export function ExportOverlay({ exportProgress, onCancel }: ExportOverlayProps) 
                 </div>
 
                 <div className="space-y-4 mb-10">
-                    <div className="flex flex-col gap-1.5 border-l-2 border-white/10 pl-4">
-                        <p className="text-lg text-white font-medium tracking-tight leading-none">
+                    <div className="flex flex-col gap-2 border-l-2 border-white/10 pl-5 py-1">
+                        <p className="text-lg font-medium tracking-tight leading-none shimmer-text">
                             {exportProgress.status === "preparing" && "Preparando entorno de renderizado"}
                             {exportProgress.status === "encoding" && "Codificando secuencia de video"}
                             {exportProgress.status === "finalizing" && "Empaquetando archivos finales"}
                         </p>
-                        <p className="text-sm text-white/50 font-mono italic">
+
+                        <p className="text-sm text-white/40 font-mono italic mt-0.5 tracking-wide">
                             {exportProgress.message}
                         </p>
                     </div>
@@ -74,6 +76,17 @@ export function ExportOverlay({ exportProgress, onCancel }: ExportOverlayProps) 
                             . El proceso es intensivo y requiere prioridad del sistema.
                         </p>
                     </div>
+
+                    {isTransparentExport && (
+                        <div className="flex items-start gap-3 p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
+                            <Icon icon="lucide:clock" className="text-cyan-400 shrink-0 mt-0.5" width="18" />
+                            <p className="text-md text-cyan-400/80 leading-relaxed">
+                                Este proceso puede tardar más de lo habitual. La exportación{" "}
+                                <span className="font-semibold text-cyan-300">WebM con transparencia</span>{" "}
+                                requiere procesamiento adicional por CPU.
+                            </p>
+                        </div>
+                    )}
 
                 </div>
 

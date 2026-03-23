@@ -18,16 +18,38 @@ import { gradientToCss, generateDefaultZoomFragments, createZoomFragment } from 
 import "../../globals.css";
 import { ToolsSidebar } from "@/app/components/ui/editor/ToolsSidebar";
 import { EditorTopBar } from "@/app/components/ui/editor/EditorTopBar";
-import { VideoCanvas } from "@/app/components/ui/editor/VideoCanvas";
+import { VideoCanvas, VIDEO_Z_INDEX } from "@/app/components/ui/editor/VideoCanvas";
 import { PlayerControls } from "@/app/components/ui/editor/PlayerControls";
 import { findValidFragmentPosition } from "@/app/components/ui/editor/ZoomFragmentTrackItem";
 import { LoadingSpinner } from "@/app/components/ui/LoadingSpinner";
+import { TimelineSkeleton } from "@/app/components/ui/Skeleton";
 
 // Lazy load heavy components
 const ControlPanel = lazy(() => import("@/app/components/ui/editor/ControlPanel").then(mod => ({ default: mod.ControlPanel })));
 const Timeline = lazy(() => import("@/app/components/ui/editor/Timeline").then(mod => ({ default: mod.Timeline })));
 const ExportOverlay = lazy(() => import("@/app/components/ui/ExportOverlay").then(mod => ({ default: mod.ExportOverlay })));
 const VideoCropperModal = lazy(() => import("@/app/components/ui/editor/VideoCropperModal").then(mod => ({ default: mod.VideoCropperModal })));
+
+
+// FUERA del componente, antes de export default:
+async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
+    try {
+        const url = URL.createObjectURL(blob);
+        const video = document.createElement("video");
+        video.src = url;
+        await new Promise<void>((resolve) => {
+            video.onloadedmetadata = () => resolve();
+            video.onerror = () => resolve();
+        });
+        // audioTracks es la API estándar — funciona en Chrome/Edge/Firefox
+        const videoEl = video as HTMLVideoElement & { audioTracks?: { length: number } };
+        const hasAudio = (videoEl.audioTracks?.length ?? 0) > 0;
+        URL.revokeObjectURL(url);
+        return hasAudio;
+    } catch {
+        return true; // en caso de error, asumir que tiene audio
+    }
+}
 
 export default function Editor() {
     const [activeTool, setActiveTool] = useState<Tool>("screenshot");
@@ -64,6 +86,7 @@ export default function Editor() {
         return [];
     });
     const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
+    const [unsplashBgUrl, setUnsplashBgUrl] = useState<string>("");
 
     // Background color/gradient state
     const [backgroundColorConfig, setBackgroundColorConfig] = useState<BackgroundColorConfig | null>(null);
@@ -119,6 +142,102 @@ export default function Editor() {
     const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
     const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
+    // Audio state
+    const [uploadedAudios, setUploadedAudios] = useState<import("@/types/audio.types").UploadedAudio[]>([]);
+    const [audioTracks, setAudioTracks] = useState<import("@/types/audio.types").AudioTrack[]>([]);
+    const [muteOriginalAudio, setMuteOriginalAudio] = useState<boolean>(false);
+    const [masterVolume, setMasterVolume] = useState<number>(1);
+    const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(null);
+
+    // Audio playback refs - store HTML Audio elements for each track
+    const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+    // Initialize audio elements when tracks change
+    useEffect(() => {
+        const currentElements = audioElementsRef.current;
+        const currentTrackIds = new Set(audioTracks.map(t => t.id));
+
+        // Remove audio elements for deleted tracks
+        for (const [trackId, audioEl] of currentElements.entries()) {
+            if (!currentTrackIds.has(trackId)) {
+                audioEl.pause();
+                audioEl.src = '';
+                currentElements.delete(trackId);
+            }
+        }
+
+        // Create audio elements for new tracks
+        for (const track of audioTracks) {
+            if (!currentElements.has(track.id)) {
+                const audio = uploadedAudios.find(a => a.id === track.audioId);
+                if (audio) {
+                    const audioEl = new Audio(audio.url);
+                    audioEl.preload = 'auto';
+                    audioEl.volume = track.volume * masterVolume;
+                    currentElements.set(track.id, audioEl);
+                }
+            }
+        }
+    }, [audioTracks, uploadedAudios, masterVolume]);
+
+    // Update audio volumes when master volume or track volumes change
+    useEffect(() => {
+        const currentElements = audioElementsRef.current;
+        for (const track of audioTracks) {
+            const audioEl = currentElements.get(track.id);
+            if (audioEl) {
+                audioEl.volume = track.volume * masterVolume;
+            }
+        }
+    }, [audioTracks, masterVolume]);
+
+    // Sync audio playback with video current time
+    const syncAudioPlayback = useCallback((videoTime: number, playing: boolean) => {
+        const currentElements = audioElementsRef.current;
+
+        for (const track of audioTracks) {
+            const audioEl = currentElements.get(track.id);
+            if (!audioEl) continue;
+
+            const trackStart = track.startTime;
+            const trackEnd = track.startTime + track.duration;
+
+            // Check if current video time is within this track's range
+            if (videoTime >= trackStart && videoTime < trackEnd) {
+                // Calculate the audio element's current time relative to track start
+                const audioTime = videoTime - trackStart;
+
+                // Only seek if there's a significant difference (avoid micro-seeks)
+                if (Math.abs(audioEl.currentTime - audioTime) > 0.1) {
+                    audioEl.currentTime = audioTime;
+                }
+
+                if (playing && audioEl.paused) {
+                    audioEl.play().catch(() => { });
+                } else if (!playing && !audioEl.paused) {
+                    audioEl.pause();
+                }
+            } else {
+                // Outside this track's range - pause if playing
+                if (!audioEl.paused) {
+                    audioEl.pause();
+                }
+            }
+        }
+    }, [audioTracks]);
+
+    // Cleanup audio elements on unmount
+    useEffect(() => {
+        const elementsRef = audioElementsRef.current;
+        return () => {
+            for (const audioEl of elementsRef.values()) {
+                audioEl.pause();
+                audioEl.src = '';
+            }
+            elementsRef.clear();
+        };
+    }, []);
+
     // Handler para cambiar el mockup
     const handleMockupChange = useCallback((newMockupId: string) => {
         setMockupId(newMockupId);
@@ -145,7 +264,7 @@ export default function Editor() {
     }, []);
 
     const updateCanvasElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
-        setCanvasElements(prev => prev.map(el => 
+        setCanvasElements(prev => prev.map(el =>
             el.id === id ? { ...el, ...updates } as CanvasElement : el
         ));
     }, []);
@@ -177,7 +296,7 @@ export default function Editor() {
 
     const pasteElement = useCallback(() => {
         if (!copiedElement) return;
-        
+
         const newElement = {
             ...copiedElement,
             id: `${copiedElement.type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -185,21 +304,145 @@ export default function Editor() {
             y: copiedElement.y + 5,
             zIndex: Date.now(),
         } as CanvasElement;
-        
+
         setCanvasElements(prev => [...prev, newElement]);
         setSelectedElementId(newElement.id);
         setActiveTool("elements");
     }, [copiedElement]);
 
     const bringToFront = useCallback((id: string) => {
-        const maxZIndex = Math.max(...canvasElements.map(el => el.zIndex), 0);
-        updateCanvasElement(id, { zIndex: maxZIndex + 1 });
+        // Get elements that are above the video (zIndex >= VIDEO_Z_INDEX)
+        const aboveVideoElements = canvasElements.filter(el => el.zIndex >= VIDEO_Z_INDEX);
+        const maxAboveVideo = aboveVideoElements.length > 0
+            ? Math.max(...aboveVideoElements.map(el => el.zIndex))
+            : VIDEO_Z_INDEX - 1;
+        // Ensure the element goes above video and all other above-video elements
+        updateCanvasElement(id, { zIndex: Math.max(maxAboveVideo + 1, VIDEO_Z_INDEX) });
     }, [canvasElements, updateCanvasElement]);
 
     const sendToBack = useCallback((id: string) => {
-        const minZIndex = Math.min(...canvasElements.map(el => el.zIndex), Date.now());
-        updateCanvasElement(id, { zIndex: minZIndex - 1 });
+        const element = canvasElements.find(el => el.id === id);
+        if (!element) return;
+
+        // If element is above video (zIndex >= VIDEO_Z_INDEX), send it just behind video
+        if (element.zIndex >= VIDEO_Z_INDEX) {
+            const behindVideoElements = canvasElements.filter(el => el.zIndex < VIDEO_Z_INDEX);
+            const minBehindVideo = behindVideoElements.length > 0
+                ? Math.min(...behindVideoElements.map(el => el.zIndex))
+                : VIDEO_Z_INDEX - 100;
+            updateCanvasElement(id, { zIndex: Math.min(minBehindVideo - 1, VIDEO_Z_INDEX - 1) });
+        } else {
+            // If already behind video, send further back
+            const behindVideoElements = canvasElements.filter(el => el.zIndex < VIDEO_Z_INDEX && el.id !== id);
+            const minBehindVideo = behindVideoElements.length > 0
+                ? Math.min(...behindVideoElements.map(el => el.zIndex))
+                : element.zIndex;
+            updateCanvasElement(id, { zIndex: minBehindVideo - 1 });
+        }
     }, [canvasElements, updateCanvasElement]);
+
+    // Audio handlers
+    const handleAudioUpload = useCallback(async (file: File) => {
+        try {
+            // Create blob URL
+            const url = URL.createObjectURL(file);
+
+            // Load audio to get duration
+            const audio = new Audio(url);
+            await new Promise<void>((resolve, reject) => {
+                audio.addEventListener('loadedmetadata', () => resolve());
+                audio.addEventListener('error', () => reject(new Error('Failed to load audio')));
+            });
+
+            const newAudio: import("@/types/audio.types").UploadedAudio = {
+                id: `audio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                name: file.name,
+                url,
+                duration: audio.duration,
+                fileSize: file.size,
+                mimeType: file.type,
+            };
+
+            setUploadedAudios(prev => [...prev, newAudio]);
+        } catch (error) {
+            console.error('Error uploading audio:', error);
+            alert('Error al subir el audio. Por favor intenta de nuevo.');
+        }
+    }, []);
+
+    const handleAudioDelete = useCallback((audioId: string) => {
+        // Remove from uploaded audios
+        setUploadedAudios(prev => {
+            const audio = prev.find(a => a.id === audioId);
+            if (audio) {
+                URL.revokeObjectURL(audio.url); // Clean up blob URL
+            }
+            return prev.filter(a => a.id !== audioId);
+        });
+
+        // Remove all tracks using this audio
+        setAudioTracks(prev => prev.filter(track => track.audioId !== audioId));
+    }, []);
+
+    const handleAddAudioTrack = useCallback((audioId: string) => {
+        const audio = uploadedAudios.find(a => a.id === audioId);
+        if (!audio) return;
+
+        // Check max tracks limit
+        const MAX_AUDIO_TRACKS = 5;
+        if (audioTracks.length >= MAX_AUDIO_TRACKS) {
+            alert(`Máximo ${MAX_AUDIO_TRACKS} pistas de audio permitidas.`);
+            return;
+        }
+
+        // Check if already in timeline
+        if (audioTracks.some(track => track.audioId === audioId)) {
+            return;
+        }
+
+        // Calculate startTime as end of last track to prevent overlapping
+        const lastTrackEnd = audioTracks.reduce((max, track) =>
+            Math.max(max, track.startTime + track.duration), 0);
+
+        const newTrack: import("@/types/audio.types").AudioTrack = {
+            id: `track-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            audioId,
+            name: audio.name,
+            startTime: lastTrackEnd,
+            duration: audio.duration,
+            volume: 1,
+            loop: false,
+        };
+
+        setAudioTracks(prev => [...prev, newTrack]);
+        if (audioTracks.length === 0) {
+            setMuteOriginalAudio(true);
+        }
+    }, [uploadedAudios, audioTracks]);
+
+    const handleUpdateAudioTrack = useCallback((trackId: string, updates: Partial<import("@/types/audio.types").AudioTrack>) => {
+        setAudioTracks(prev => prev.map(track =>
+            track.id === trackId ? { ...track, ...updates } : track
+        ));
+    }, []);
+
+    const handleDeleteAudioTrack = useCallback((trackId: string) => {
+        setAudioTracks(prev => {
+            const remaining = prev.filter(track => track.id !== trackId);
+            if (remaining.length === 0) {
+                setMuteOriginalAudio(false);
+            }
+            return remaining;
+        });
+    }, []);
+
+    const handleToggleMuteOriginalAudio = useCallback(() => {
+        setMuteOriginalAudio(prev => !prev);
+    }, []);
+
+    const handleMasterVolumeChange = useCallback((volume: number) => {
+        setMasterVolume(volume);
+    }, []);
 
     // Genere Thumbnails de alta calidad y su generacion de intervalo corto para que el scrubbing se sienta instantáneo
     const { getThumbnailForTime } = useVideoThumbnails(
@@ -214,16 +457,38 @@ export default function Editor() {
 
     const { exportVideo, cancelExport, exportProgress } = useVideoExport(videoRef, canvasRef);
     const { uploadVideo, loadUploadedVideo, isUploading } = useVideoUpload();
+    const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
     const handleExport = (quality: ExportQuality) => {
         exportVideo({
             quality,
-            trim: trimRange.end > trimRange.start ? { start: trimRange.start, end: trimRange.end } : undefined
+            videoBlob: videoBlob ?? undefined,
+            transparentBackground: selectedWallpaper === -1,
+            trim: trimRange.end > trimRange.start ? { start: trimRange.start, end: trimRange.end } : undefined,
+            // Audio settings
+            muteOriginalAudio,
+            audioTracks: audioTracks.map(track => {
+                const audio = uploadedAudios.find(a => a.id === track.audioId);
+                return {
+                    audioUrl: audio?.url || '',
+                    startTime: track.startTime,
+                    duration: track.duration,
+                    volume: track.volume,
+                    loop: track.loop,
+                };
+            }),
+            masterVolume,
         });
     };
+    const [videoHasAudioTrack, setVideoHasAudioTrack] = useState<boolean>(true);
 
     // Handler para subir video
     const handleVideoUpload = useCallback(async (file: File) => {
+        setVideoBlob(file);
+        detectVideoHasAudio(file).then(hasAudio => {
+            setVideoHasAudioTrack(hasAudio);
+            if (!hasAudio) setMuteOriginalAudio(true);
+        });
         try {
             // Clear any existing recorded video and thumbnails
             await deleteRecordedVideo();
@@ -269,10 +534,14 @@ export default function Editor() {
                             blob: new Blob(), // Not needed for display
                         };
                         setAspectRatio(uploadedData.aspectRatio);
-
-                        // Always store the actual video dimensions
                         setVideoDimensions({ width: uploadedData.width, height: uploadedData.height });
                     }
+                } else if (videoData.blob && videoData.blob.size > 0) {
+                    setVideoBlob(videoData.blob);
+                    detectVideoHasAudio(videoData.blob).then(hasAudio => {
+                        setVideoHasAudioTrack(hasAudio);
+                        if (!hasAudio) setMuteOriginalAudio(true);
+                    });
                 }
 
                 if (videoData) {
@@ -283,6 +552,7 @@ export default function Editor() {
                     const defaultFragments = generateDefaultZoomFragments(videoData.duration);
                     setZoomFragments(defaultFragments);
                 }
+
             } catch (error) {
                 console.error("Error loading video:", error);
             }
@@ -297,10 +567,19 @@ export default function Editor() {
         }
     }, [uploadedImages]);
 
+    // Mute/unmute original video audio
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.muted = muteOriginalAudio;
+        }
+    }, [muteOriginalAudio]);
+
     const togglePlayPause = useCallback(() => {
         if (videoRef.current) {
             if (isPlaying) {
                 videoRef.current.pause();
+                // Pause all audio tracks
+                syncAudioPlayback(videoRef.current.currentTime, false);
             } else {
                 // When playing, ensure we start from within trim range
                 if (trimRange.end > 0) {
@@ -312,10 +591,12 @@ export default function Editor() {
                     }
                 }
                 videoRef.current.play();
+                // Start audio playback synced with video
+                syncAudioPlayback(videoRef.current.currentTime, true);
             }
             setIsPlaying(!isPlaying);
         }
-    }, [isPlaying, trimRange.start, trimRange.end]);
+    }, [isPlaying, trimRange.start, trimRange.end, syncAudioPlayback]);
 
     // Smooth time update using requestAnimationFrame
     const updateTimeSmoothRef = useRef<() => void>(() => { });
@@ -331,6 +612,8 @@ export default function Editor() {
                 // Check if we've reached the trim end point
                 if (trimRange.end > 0 && currentVideoTime >= trimRange.end) {
                     videoRef.current.pause();
+                    // Stop all audio tracks
+                    syncAudioPlayback(currentVideoTime, false);
                     setIsPlaying(false);
                     justEndedRef.current = true;
                     setCurrentTime(trimRange.end);
@@ -340,12 +623,14 @@ export default function Editor() {
                 }
 
                 setCurrentTime(currentVideoTime);
+                // Sync audio playback with current video time
+                syncAudioPlayback(currentVideoTime, true);
             }
             if (isPlaying && !isDraggingPlayhead) {
                 animationFrameRef.current = requestAnimationFrame(updateTimeSmoothRef.current);
             }
         };
-    }, [isPlaying, isDraggingPlayhead, trimRange.end]);
+    }, [isPlaying, isDraggingPlayhead, trimRange.end, syncAudioPlayback]);
 
     // Start/stop animation frame loop based on playing state
     useEffect(() => {
@@ -394,8 +679,13 @@ export default function Editor() {
         if (wasPlayingBeforeDragRef.current && videoRef.current) {
             videoRef.current.play();
             setIsPlaying(true);
+            // Resume audio playback after drag ends
+            syncAudioPlayback(scrubTime, true);
+        } else {
+            // Sync audio to new position (paused)
+            syncAudioPlayback(scrubTime, false);
         }
-    }, [scrubTime]);
+    }, [scrubTime, syncAudioPlayback]);
 
     const handleZoomChange = useCallback((zoom: number) => {
         setTimelineZoom(zoom);
@@ -433,8 +723,10 @@ export default function Editor() {
             } else {
                 videoRef.current.currentTime = time;
             }
+            // Sync audio to new seek position
+            syncAudioPlayback(time, isPlaying);
         }
-    }, [isDraggingPlayhead]);
+    }, [isDraggingPlayhead, isPlaying, syncAudioPlayback]);
 
     const handleImageUpload = (file: File) => {
         const reader = new FileReader();
@@ -449,7 +741,17 @@ export default function Editor() {
     };
 
     const handleImageSelect = (url: string) => {
-        setSelectedImageUrl(url);
+        if (backgroundTab === "wallpaper") {
+            // Unsplash image selected from wallpaper tab — show without switching tabs
+            setUnsplashBgUrl(url);
+        } else {
+            setSelectedImageUrl(url);
+        }
+    };
+
+    const handleWallpaperSelect = (index: number) => {
+        setSelectedWallpaper(index);
+        setUnsplashBgUrl(""); // Clear Unsplash override when selecting a regular wallpaper
     };
 
     const handleImageRemove = (url: string) => {
@@ -589,6 +891,14 @@ export default function Editor() {
                 return; // Prevent zoom fragment deletion if element is selected
             }
 
+            // Delete selected audio track with Delete or Backspace
+            if ((e.key === "Delete" || e.key === "Backspace") && selectedAudioTrackId) {
+                e.preventDefault();
+                handleDeleteAudioTrack(selectedAudioTrackId);
+                setSelectedAudioTrackId(null);
+                return;
+            }
+
             // Delete selected zoom fragment with Delete or Backspace
             if ((e.key === "Delete" || e.key === "Backspace") && selectedZoomFragmentId) {
                 e.preventDefault();
@@ -600,6 +910,8 @@ export default function Editor() {
                 e.preventDefault();
                 if (selectedElementId) {
                     setSelectedElementId(null);
+                } else if (selectedAudioTrackId) {
+                    setSelectedAudioTrackId(null);
                 } else if (selectedZoomFragmentId) {
                     setSelectedZoomFragmentId(null);
                 }
@@ -610,7 +922,7 @@ export default function Editor() {
 
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [selectedElementId, selectedZoomFragmentId, deleteCanvasElement, handleDeleteZoomFragment, copySelectedElement, pasteElement]);
+    }, [selectedElementId, selectedZoomFragmentId, selectedAudioTrackId, deleteCanvasElement, handleDeleteZoomFragment, handleDeleteAudioTrack, copySelectedElement, pasteElement]);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -674,7 +986,7 @@ export default function Editor() {
                                     backgroundTab={backgroundTab}
                                     onBackgroundTabChange={handleBackgroundTabChange}
                                     selectedWallpaper={selectedWallpaper}
-                                    onWallpaperSelect={setSelectedWallpaper}
+                                    onWallpaperSelect={handleWallpaperSelect}
                                     backgroundBlur={backgroundBlur}
                                     onBackgroundBlurChange={setBackgroundBlur}
                                     padding={padding}
@@ -716,6 +1028,20 @@ export default function Editor() {
                                     onDeleteCanvasElement={deleteCanvasElement}
                                     onBringToFront={bringToFront}
                                     onSendToBack={sendToBack}
+                                    // Audio props
+                                    uploadedAudios={uploadedAudios}
+                                    audioTracks={audioTracks}
+                                    muteOriginalAudio={muteOriginalAudio}
+                                    masterVolume={masterVolume}
+                                    onAudioUpload={handleAudioUpload}
+                                    onAudioDelete={handleAudioDelete}
+                                    onAddAudioTrack={handleAddAudioTrack}
+                                    onUpdateAudioTrack={handleUpdateAudioTrack}
+                                    onDeleteAudioTrack={handleDeleteAudioTrack}
+                                    onToggleMuteOriginalAudio={handleToggleMuteOriginalAudio}
+                                    onMasterVolumeChange={handleMasterVolumeChange}
+                                    videoDuration={videoDuration}
+                                    videoHasAudioTrack={videoHasAudioTrack}
                                 />
                             </Suspense>
                         </motion.div>
@@ -748,6 +1074,7 @@ export default function Editor() {
                     <EditorTopBar
                         onExport={handleExport}
                         exportProgress={exportProgress}
+                        hasTransparentBackground={selectedWallpaper === -1}
                     />
 
                     {/* Video Canvas */}
@@ -765,6 +1092,7 @@ export default function Editor() {
                         selectedWallpaper={selectedWallpaper}
                         backgroundBlur={backgroundBlur}
                         selectedImageUrl={selectedImageUrl}
+                        unsplashOverrideUrl={unsplashBgUrl}
                         backgroundColorCss={backgroundColorCss}
                         onTimeUpdate={handleTimeUpdate}
                         onLoadedMetadata={handleLoadedMetadata}
@@ -819,11 +1147,7 @@ export default function Editor() {
                         onZoomChange={handleZoomChange}
                     />
 
-                    <Suspense fallback={
-                        <div className="h-[160px] bg-[#141417] border-t border-white/10 flex items-center justify-center">
-                            <LoadingSpinner size="sm" message="Cargando timeline..." />
-                        </div>
-                    }>
+                    <Suspense fallback={<TimelineSkeleton />}>
                         <Timeline
                             videoDuration={videoDuration}
                             currentTime={currentTime}
@@ -842,6 +1166,12 @@ export default function Editor() {
                             onAddZoomFragment={handleAddZoomFragment}
                             onUpdateZoomFragment={handleUpdateZoomFragment}
                             onActivateZoomTool={handleActivateZoomTool}
+                            // Audio props
+                            audioTracks={audioTracks}
+                            uploadedAudios={uploadedAudios}
+                            selectedAudioTrackId={selectedAudioTrackId}
+                            onSelectAudioTrack={setSelectedAudioTrackId}
+                            onUpdateAudioTrack={handleUpdateAudioTrack}
                         />
                     </Suspense>
 
@@ -852,6 +1182,7 @@ export default function Editor() {
                 <ExportOverlay
                     exportProgress={exportProgress}
                     onCancel={cancelExport}
+                    isTransparentExport={selectedWallpaper === -1}
                 />
             </Suspense>
             <Suspense fallback={null}>

@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { MOCKUPS, MOCKUP_CATEGORIES } from "@/lib/mockup-data";
 import type { MockupCategory, MockupConfig, MockupFeatures } from "@/types/mockup.types";
 import { getMockupFeatures } from "@/types/mockup.types";
+import { MockupGridSkeleton } from "../Skeleton";
 
 const FRAME_COLORS_DARK = ["#1e1e1e", "#181818", "#252526", "#0d1117", "#1a1b26", "#282a36"];
 const FRAME_COLORS_LIGHT = ["#ffffff", "#f3f3f3", "#f6f8fa", "#fafafa", "#e8e8e8"];
@@ -26,6 +27,8 @@ export function MockupMenu({
     onMockupConfigChange,
 }: MockupMenuProps) {
     const [selectedCategory, setSelectedCategory] = useState<MockupCategory>("all");
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const [gridLoaded, setGridLoaded] = useState(false);
 
     const filteredMockups = selectedCategory === "all"
         ? MOCKUPS
@@ -37,7 +40,7 @@ export function MockupMenu({
 
     const handleMockupSelect = (id: string) => {
         onMockupChange?.(id);
-        
+
         // Reset opacity to default when changing mockup to ensure slider works immediately
         if (id !== mockupId) {
             setTimeout(() => {
@@ -45,12 +48,16 @@ export function MockupMenu({
             }, 0);
         }
     };
-
+    const handleCategoryChange = (cat: MockupCategory) => {
+        setSelectedCategory(cat);
+        setGridLoaded(false);
+        setTimeout(() => setGridLoaded(true), 250);
+    };
     const handleDarkModeChange = (isDark: boolean) => {
         // Determinar si el color actual es claro u oscuro
         const currentFrameColor = (mockupConfig?.frameColor || "#f6f6f6").toLowerCase();
         const isCurrentColorDark = FRAME_COLORS_DARK.includes(currentFrameColor);
-        
+
         // Si el modo cambia, actualizar el frameColor a uno apropiado
         let newFrameColor = currentFrameColor;
         if (isDark && !isCurrentColorDark) {
@@ -60,7 +67,7 @@ export function MockupMenu({
             // Cambiar a light mode pero el color es oscuro -> usar color claro
             newFrameColor = "#f6f6f6";
         }
-        
+
         onMockupConfigChange?.({ darkMode: isDark, frameColor: newFrameColor });
     };
 
@@ -89,7 +96,12 @@ export function MockupMenu({
 
             <div className="space-y-2">
                 <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Tipo de ventana</p>
-                <Popover>
+                <Popover onOpenChange={(open) => {
+                    setPopoverOpen(open);
+                    if (open && !gridLoaded) {
+                        setTimeout(() => setGridLoaded(true), 300);
+                    }
+                }}>
                     <PopoverTrigger asChild>
                         <button
                             type="button"
@@ -139,7 +151,7 @@ export function MockupMenu({
                                 {MOCKUP_CATEGORIES.map((cat) => (
                                     <button
                                         key={cat.id}
-                                        onClick={() => setSelectedCategory(cat.id)}
+                                        onClick={() => handleCategoryChange(cat.id)}
                                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all ${selectedCategory === cat.id
                                             ? "bg-blue-500/20 text-blue-400 border border-blue-500/40"
                                             : "bg-white/5 text-white/50 hover:text-white/70 border border-transparent hover:border-white/10"
@@ -155,53 +167,90 @@ export function MockupMenu({
                             </div>
 
                             {/* Grid de mockups */}
-                            <div className="p-3 grid grid-cols-3 gap-2 overflow-y-auto custom-scrollbar">
-                                {filteredMockups.map((mockup) => {
-                                    const categoryConfig = MOCKUP_CATEGORIES.find(c => c.id === mockup.category);
-                                    const isActive = mockupId === mockup.id;
+                            <div className="overflow-y-auto custom-scrollbar">
+                                {!gridLoaded ? (
+                                    <MockupGridSkeleton />
+                                ) : (
+                                    <div className="p-3 grid grid-cols-3 gap-2">
+                                        {filteredMockups.map((mockup) => {
+                                            const categoryConfig = MOCKUP_CATEGORIES.find(c => c.id === mockup.category);
+                                            const isActive = mockupId === mockup.id;
 
-                                    return (
-                                        <button
-                                            key={mockup.id}
-                                            onClick={() => handleMockupSelect(mockup.id)}
-                                            className={`group relative w-full h-28 squircle-element border-2 overflow-hidden shadow-lg transition-all active:scale-95 ${isActive
-                                                ? "border-blue-500 ring-2 ring-blue-500/50"
-                                                : "border-neutral-800 hover:border-white/20"
-                                                }`}
-                                        >
-                                            <div
-                                                className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105"
-                                                style={{
-                                                    backgroundImage: `url('${categoryConfig?.bgUrl || "https://i.ibb.co/r2JQ3Gcy/minimal-02.jpg"}')`
-                                                }}
-                                            >
-                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    {mockup.preview}
-                                                </div>
-                                            </div>
+                                            return (
+                                                <button
+                                                    key={mockup.id}
+                                                    onClick={() => handleMockupSelect(mockup.id)}
+                                                    className={`group relative w-full h-28 squircle-element border-2 overflow-hidden shadow-lg transition-all active:scale-95 ${isActive
+                                                        ? "border-blue-500 ring-2 ring-blue-500/50"
+                                                        : "border-neutral-800 hover:border-white/20"
+                                                        }`}
+                                                >
+                                                    <div
+                                                        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105"
+                                                        style={{
+                                                            backgroundImage: `url('${categoryConfig?.bgUrl || "https://i.ibb.co/r2JQ3Gcy/minimal-02.jpg"}')`
+                                                        }}
+                                                    >
+                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                            {mockup.preview}
+                                                        </div>
+                                                    </div>
 
-                                            <div className="absolute inset-0 group-hover:bg-black/5 transition-colors pointer-events-none" />
+                                                    <div className="absolute inset-0 group-hover:bg-black/5 transition-colors pointer-events-none" />
 
-                                            <div className="absolute bottom-0 left-0 bg-black/60 backdrop-blur-md border-t border-r border-white/10 px-2 py-1 text-[9px] text-white/80 font-bold tracking-tighter rounded-tr-md rounded-bl-lg z-30">
-                                                {mockup.name}
-                                            </div>
+                                                    <div className="absolute bottom-0 left-0 bg-black/60 backdrop-blur-md border-t border-r border-white/10 px-2 py-1 text-[9px] text-white/80 font-bold tracking-tighter rounded-tr-md rounded-bl-lg z-30">
+                                                        {mockup.name}
+                                                    </div>
 
-                                            {isActive && (
-                                                <div className="absolute top-2 right-2 rounded-full shadow-[0_0_10px_rgba(96,165,250,0.8)] z-30">
-                                                    <Icon icon="icon-park-solid:check-one" width="20" className="text-blue-500" />
-                                                </div>
+                                                    {isActive && (
+                                                        <div className="absolute top-2 right-2 rounded-full shadow-[0_0_10px_rgba(96,165,250,0.8)] z-30">
+                                                            <Icon icon="icon-park-solid:check-one" width="20" className="text-blue-500" />
+                                                        </div>
 
-                                            )}
-                                        </button>
+                                                    )}
+                                                </button>
 
-                                    );
-                                })}
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </PopoverContent>
                 </Popover>
             </div>
-
+            {/* Sugerencias cuando no hay mockup seleccionado */}
+            {mockupId === "none" && (
+                <div className="space-y-2.5">
+                    <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Sugeridos</p>
+                    <div className="grid grid-cols-3 gap-2">
+                        {["macos", "chrome", "macos-glass", "brave", "chrome-glass", "macos-dark-ide"].map((id) => {
+                            const mockup = MOCKUPS.find(m => m.id === id);
+                            if (!mockup) return null;
+                            const categoryConfig = MOCKUP_CATEGORIES.find(c => c.id === mockup.category);
+                            return (
+                                <button
+                                    key={id}
+                                    onClick={() => handleMockupSelect(id)}
+                                    className="group relative w-full h-20 squircle-element border border-white/[0.07] hover:border-white/20 overflow-hidden transition-all active:scale-95"
+                                >
+                                    <div
+                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                                        style={{ backgroundImage: `url('${categoryConfig?.bgUrl || ""}')` }}
+                                    >
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none scale-90">
+                                            {mockup.preview}
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-0 left-0 bg-black/60 border-t border-r border-white/10 px-2 py-0.5 text-[8px] text-white/80 font-bold tracking-tighter rounded-tr-md rounded-bl-lg z-30">
+                                        {mockup.name}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             {/* Controles condicionales basados en features del mockup */}
             {features.hasDarkMode && (
                 <div className="flex items-center justify-between">
@@ -209,12 +258,12 @@ export function MockupMenu({
                         <Icon icon="ph:moon-bold" width="14" />
                         <span>Modo oscuro</span>
                     </div>
-                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.06] border border-white/[0.07]">
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/6 border border-white/[0.07]">
                         <button
                             onClick={() => handleDarkModeChange(true)}
                             className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] transition-colors ${mockupConfig?.darkMode
-                                    ? "bg-[#09090B] border border-white/10 text-white/70"
-                                    : "text-white/30 hover:text-white/50"
+                                ? "bg-[#09090B] border border-white/10 text-white/70"
+                                : "text-white/30 hover:text-white/50"
                                 }`}
                         >
                             <Icon icon="ph:moon-bold" width="10" />
@@ -223,8 +272,8 @@ export function MockupMenu({
                         <button
                             onClick={() => handleDarkModeChange(false)}
                             className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] transition-colors ${!mockupConfig?.darkMode
-                                    ? "bg-[#09090B] border border-white/10 text-white/70"
-                                    : "text-white/30 hover:text-white/50"
+                                ? "bg-[#09090B] border border-white/10 text-white/70"
+                                : "text-white/30 hover:text-white/50"
                                 }`}
                         >
                             <Icon icon="ph:sun-bold" width="10" />
@@ -247,8 +296,8 @@ export function MockupMenu({
                                 key={color}
                                 onClick={() => handleFrameColorChange(color)}
                                 className={`aspect-square squircle-element cursor-pointer hover:ring-2 transition shadow-sm ring-white/60 border border-white/10 ${mockupConfig?.frameColor?.toLowerCase() === color.toLowerCase()
-                                        ? "ring-2 ring-white/90 shadow-lg shadow-white"
-                                        : "border-white/10 border-transparent hover:border-white/30"
+                                    ? "ring-2 ring-white/90 shadow-lg shadow-white"
+                                    : "border-white/10 border-transparent hover:border-white/30"
                                     }`}
                                 style={{ backgroundColor: color }}
                                 aria-label={`Seleccionar color ${color}`}
@@ -273,7 +322,7 @@ export function MockupMenu({
                 <div className="space-y-2">
                     <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">URL de página</p>
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#09090B] border border-white/[0.07] focus-within:border-blue-500/40 transition-colors">
-                        <Icon icon="ph:globe-bold" width="13" className="text-white/25 shrink-0" />
+                        <Icon icon="line-md:link" width="13" className="text-white/30 shrink-0" />
                         <input
                             type="text"
                             value={mockupConfig?.url || ""}
@@ -290,6 +339,7 @@ export function MockupMenu({
                 <div className="space-y-3">
                     {features.hasHeaderScale && (
                         <SliderControl
+                            icon="mdi:resize"
                             label="Escala del encabezado"
                             value={mockupConfig?.headerScale ?? 70}
                             min={50}
@@ -299,6 +349,7 @@ export function MockupMenu({
                     )}
                     {features.hasHeaderOpacity && (
                         <SliderControl
+                            icon="mdi:opacity"
                             label="Transparencia del encabezado"
                             value={mockupConfig?.headerOpacity ?? 100}
                             min={0}
@@ -313,7 +364,7 @@ export function MockupMenu({
             {mockupId !== "none" && (
                 <button
                     onClick={() => handleMockupSelect("none")}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-white/[0.07] bg-white/[0.03] hover:bg-red-500/10 hover:border-red-500/30 text-white/40 hover:text-red-400 text-[11px] transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-white/7 bg-white/4 hover:bg-red-500/10 hover:border-red-500/30 text-white/40 hover:text-red-400 text-[11px] transition-all"
                 >
                     <Icon icon="ph:trash-bold" width="13" />
                     Quitar mockup

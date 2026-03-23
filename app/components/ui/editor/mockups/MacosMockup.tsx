@@ -23,17 +23,14 @@ export function MacosMockup({
     const cornerRadius = roundedCorners ?? config.cornerRadius;
     const headerOpacity = config.headerOpacity ?? 100;
     
-    // Factor de escala para el header (0.5 a 1.5)
     const headerScale = (config.headerScale || 100) / 100;
     
-    // Colores según el modo
     const bgColor = isDark ? "#1e1e1e" : "#f9f9f9";
     const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
     const textColor = isDark ? "#9ca3af" : "#6b7280";
     const urlBarBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
     const urlBarBgBase = deriveSearchBg(frameColor);
-    // Valores base escalados proporcionalmente
     const baseHeight = 36;
     const basePadding = 12;
     const baseGap = 12;
@@ -42,7 +39,6 @@ export function MacosMockup({
     const baseUrlBarHeight = 24;
     const baseFontSize = 10;
     
-    // Aplicar escala
     const headerHeight = baseHeight * headerScale;
     const headerPadding = basePadding * headerScale;
     const buttonGroupGap = 6 * headerScale;

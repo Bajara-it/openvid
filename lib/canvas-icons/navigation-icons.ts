@@ -1,10 +1,3 @@
-/**
- * Iconos de navegación para Canvas 2D
- */
-
-/**
- * Dibuja un icono de chevron izquierdo (flecha hacia atrás)
- */
 export function drawChevronLeft(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -20,9 +13,6 @@ export function drawChevronLeft(ctx: CanvasRenderingContext2D, x: number, y: num
     ctx.restore();
 }
 
-/**
- * Dibuja un icono de chevron derecho (flecha hacia adelante)
- */
 export function drawChevronRight(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -38,9 +28,6 @@ export function drawChevronRight(ctx: CanvasRenderingContext2D, x: number, y: nu
     ctx.restore();
 }
 
-/**
- * Dibuja un icono de menú hamburguesa (tres líneas horizontales)
- */
 export function drawMenuIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -48,7 +35,6 @@ export function drawMenuIcon(ctx: CanvasRenderingContext2D, x: number, y: number
     ctx.lineCap = "round";
     const s = size;
     
-    // Tres líneas horizontales
     const lineY1 = y + s * 0.25;
     const lineY2 = y + s * 0.5;
     const lineY3 = y + s * 0.75;

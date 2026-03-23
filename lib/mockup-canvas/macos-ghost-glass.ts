@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup de macOS Ghost Glass en Canvas
- */
-
 import { hexToRgba } from "@/lib/utils";
 import { deriveSearchBg } from "@/lib/color.utils";
 import {
@@ -42,13 +38,10 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
     const textColor   = isDark ? "#cccccc" : "#555555";
     const iconColor   = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)";
-    // Ghost buttons: adapt opacity to dark/light
     const ghostButtonStroke = isDark ? "rgba(180,180,180,0.4)" : "rgba(150,150,150,0.6)";
 
-    // 0. Sombra exterior
     drawMockupShadow(ctx, x, y, width, height, glassCornerRadius, shadowBlur);
 
-    // 1. Cáscara glass — linear-gradient(45deg, 0.3→0.4) + bordes top/left
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, glassCornerRadius);
     const grad = ctx.createLinearGradient(x, y + height, x + width, y);
@@ -69,23 +62,19 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     ctx.stroke();
     ctx.restore();
 
-    // 2. Área interior (padding: 12px)
     const innerX          = x + glassPadding;
     const innerY          = y + glassPadding;
     const innerWidth      = width  - glassPadding * 2;
     const innerHeight     = height - glassPadding * 2;
     const innerCornerRadius = Math.max(0, glassCornerRadius + 4 );
 
-    // 3. Clip al área interior
     ctx.save();
     drawRoundedRectPath(ctx, innerX, innerY, innerWidth, innerHeight, innerCornerRadius);
     ctx.clip();
 
-    // 4. Fondo del contenido
     ctx.fillStyle = bgColor;
     ctx.fillRect(innerX, innerY + headerHeight, innerWidth, innerHeight - headerHeight);
 
-    // 5. Header con frameColor
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(innerX + innerCornerRadius, innerY);
@@ -100,7 +89,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     ctx.fill();
     ctx.restore();
 
-    // 6. Línea separadora
     ctx.save();
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1;
@@ -110,7 +98,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     ctx.stroke();
     ctx.restore();
 
-    // 7. Botones ghost
     const buttonY = innerY + (headerHeight - buttonSize) / 2;
     [0, 1, 2].forEach((i) => {
         const btnX = innerX + buttonLeftPadding + i * (buttonSize + buttonGap);
@@ -123,7 +110,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
         ctx.restore();
     });
 
-    // 8. Iconos navegación izquierda
     const navStartX     = innerX + buttonLeftPadding + 3 * (buttonSize + buttonGap) + buttonGap * 2;
     const iconY         = innerY + (headerHeight - iconSize) / 2;
     const navGap        = 6 * headerScale;
@@ -133,7 +119,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     drawChevronLeft(ctx, chevronStartX, iconY, iconSize, iconColor);
     drawChevronRight(ctx, chevronStartX + iconSize + 6 * headerScale, iconY, iconSize, iconColor);
 
-    // 9. URL bar centrada
     const maxUrlBarWidth = 576 * headerScale;
     const urlBarWidth    = Math.min(innerWidth * 0.5, maxUrlBarWidth);
     const urlBarX        = innerX + (innerWidth - urlBarWidth) / 2;
@@ -159,7 +144,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
 
     drawRefreshIcon(ctx, urlBarX + urlBarWidth - urlBarPadding - buttonSize, urlBarY + (urlBarHeight - buttonSize) / 2, buttonSize, iconColor + "99");
 
-    // 10. Iconos derecha
     const iconsRightPadding = 12 * headerScale;
     const iconGap           = 10 * headerScale;
     const copyIconX         = innerX + innerWidth - iconsRightPadding - iconSize;
@@ -172,7 +156,6 @@ export function drawMacosGhostGlassMockup(context: MockupCanvasContext): MockupD
     drawUploadIcon(ctx,   uploadIconX,   iconY, iconSize, iconColor);
     drawDownloadIcon(ctx, downloadIconX, iconY, iconSize, iconColor);
 
-    // Fin clip interior
     ctx.restore();
 
     return {

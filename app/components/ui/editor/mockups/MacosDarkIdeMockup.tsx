@@ -51,7 +51,6 @@ export function MacosDarkIdeMockup({
                     : "none",
             }}
         >
-            {/* Title Bar */}
             <div
                 className="flex items-center justify-between select-none shrink-0"
                 style={{
@@ -65,16 +64,13 @@ export function MacosDarkIdeMockup({
                     color:                textColor,
                 }}
             >
-                {/* Left: macOS dots + menu items */}
                 <div className="flex items-center" style={{ gap: `${menuGap * 2}px` }}>
-                    {/* Traffic lights */}
                     <div className="flex items-center" style={{ gap: `${6 * headerScale}px` }}>
                         <div style={{ width: `${10 * headerScale}px`, height: `${10 * headerScale}px`, borderRadius: "50%", backgroundColor: "#ff5f57", border: "1px solid #e0443e" }} />
                         <div style={{ width: `${10 * headerScale}px`, height: `${10 * headerScale}px`, borderRadius: "50%", backgroundColor: "#febc2e", border: "1px solid #d89f24" }} />
                         <div style={{ width: `${10 * headerScale}px`, height: `${10 * headerScale}px`, borderRadius: "50%", backgroundColor: "#28c840", border: "1px solid #1aab29" }} />
                     </div>
 
-                    {/* Menu items */}
                     <div className="flex items-center" style={{ fontSize: `${menuFontSize}px`, color: isDark ? "#999999" : "#555555" }}>
                         {["File", "Edit", "Selection", "View", "Go"].map((item, i) => (
                             <span
@@ -88,7 +84,6 @@ export function MacosDarkIdeMockup({
                     </div>
                 </div>
 
-                {/* Center: Search bar */}
                 <div
                     className="flex-1 flex justify-center"
                     style={{ padding: `0 ${headerPaddingX}px`, maxWidth: `${400 * headerScale}px` }}
@@ -112,7 +107,6 @@ export function MacosDarkIdeMockup({
                     </div>
                 </div>
 
-                {/* Right: hamburger */}
                 <div className="flex items-center justify-end" style={{ width: `${80 * headerScale}px`, color: isDark ? "rgba(163,163,163,0.8)" : "rgba(100,100,100,0.8)" }}>
                     <svg style={{ width: `${14 * headerScale}px`, height: `${14 * headerScale}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M4 6h16M4 12h16M4 18h16" strokeWidth="1.5" strokeLinecap="round"/>
@@ -120,7 +114,6 @@ export function MacosDarkIdeMockup({
                 </div>
             </div>
 
-            {/* Content */}
             <div
                 className="flex-1 relative overflow-hidden"
                 style={{ backgroundColor: bgColor }}

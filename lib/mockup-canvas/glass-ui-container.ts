@@ -1,7 +1,3 @@
-/**
- * Renderizado del mockup GlassUIContainer en Canvas
- */
-
 import type { MockupCanvasContext, MockupDrawResult } from "./types";
 import { drawRoundedRectPath, drawMockupShadow } from "./shared";
 
@@ -12,10 +8,8 @@ export function drawGlassUIContainerMockup(context: MockupCanvasContext): Mockup
     const glassCornerRadius = cornerRadius;
     const innerCornerRadius = Math.max(0, glassCornerRadius + 4 );
 
-    // 0. Sombra exterior
     drawMockupShadow(ctx, x, y, width, height, glassCornerRadius, shadowBlur);
 
-    // 1. Cáscara glass (gradiente 45deg como .glass-border)
     ctx.save();
     drawRoundedRectPath(ctx, x, y, width, height, glassCornerRadius);
     const grad = ctx.createLinearGradient(x, y + height, x + width, y); // 45deg
@@ -24,7 +18,6 @@ export function drawGlassUIContainerMockup(context: MockupCanvasContext): Mockup
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // border-top: 0.75px solid rgba(255,255,255,0.8)
     ctx.strokeStyle = "rgba(255,255,255)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -32,7 +25,6 @@ export function drawGlassUIContainerMockup(context: MockupCanvasContext): Mockup
     ctx.lineTo(x + width - glassCornerRadius, y + 0.375);
     ctx.stroke();
 
-    // border-left: 0.75px)
     ctx.beginPath();
     ctx.moveTo(x + 0.375, y + glassCornerRadius);
     ctx.lineTo(x + 0.375, y + height - glassCornerRadius);
@@ -40,7 +32,6 @@ export function drawGlassUIContainerMockup(context: MockupCanvasContext): Mockup
 
     ctx.restore();
 
-    // 2. Área interior — clip para que el contenido (video) quede dentro
     const innerX = x + glassPadding;
     const innerY = y + glassPadding;
     const innerWidth  = width  - glassPadding * 2;

@@ -23,7 +23,6 @@ export function ChromeGlassMockup({
     const headerOpacity = config.headerOpacity ?? 100;
     const headerScale   = (config.headerScale || 100) / 100;
 
-    // ── Colores — idénticos a ChromeMockup ──
     const bgColor       = isDark ? "#1e1e1e" : "#ffffff";
     const tabBarBg      = frameColor;
     const addressBg     = frameColor;
@@ -34,7 +33,6 @@ export function ChromeGlassMockup({
     const iconColor     = isDark ? "rgba(255,255,255,0.5)" : "rgba(55,65,81,0.7)";
     const tabBorder     = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)";
 
-    // ── Dimensiones — idénticas a ChromeMockup ──
     const tabBarH    = 32 * headerScale;
     const tabH       = 26 * headerScale;
     const tabW       = 180 * headerScale;
@@ -71,7 +69,6 @@ export function ChromeGlassMockup({
                 borderLeft: "1px solid rgba(255,255,255,0.6)",
             }}
         >
-            {/* ── ROW 1: Tab bar ── */}
             <div
                 className="flex items-center select-none shrink-0"
                 style={{
@@ -81,7 +78,6 @@ export function ChromeGlassMockup({
                     borderTopRightRadius: `${cornerRadius}px`,
                 }}
             >
-                {/* Active tab */}
                 <div
                     className="flex items-center shrink-0"
                     style={{
@@ -98,20 +94,17 @@ export function ChromeGlassMockup({
                         gap:             `${6 * headerScale}px`,
                     }}
                 >
-                    {/* Favicon */}
                     <svg style={{ width: `${tabIconSz}px`, height: `${tabIconSz}px`, flexShrink: 0, color: "#2563eb" }} fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
                     </svg>
                     <span className="truncate flex-1" style={{ fontSize: `${tabFontSz}px`, color: textColor }}>
                         {url?.replace(/^https?:\/\//, "") ?? "Nueva pestaña"}
                     </span>
-                    {/* Close X */}
                     <svg style={{ width: `${tabCloseS}px`, height: `${tabCloseS}px`, flexShrink: 0, color: iconColor, opacity: 0.7 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18L18 6M6 6l12 12" strokeWidth="2.5" strokeLinecap="round" />
                     </svg>
                 </div>
 
-                {/* New tab + */}
                 <div
                     className="flex items-center justify-center self-center"
                     style={{
@@ -127,7 +120,6 @@ export function ChromeGlassMockup({
                     </svg>
                 </div>
 
-                {/* Windows buttons (right) */}
                 <div className="ml-auto flex h-full" style={{ color: iconColor }}>
                     <div className="flex items-center justify-center" style={{ width: `${winBtnW}px` }}>
                         <svg width={10 * headerScale} height={1 * headerScale} viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1"/></svg>
@@ -145,7 +137,6 @@ export function ChromeGlassMockup({
                 </div>
             </div>
 
-            {/* ── ROW 2: Address bar ── */}
             <div
                 className="flex items-center justify-between select-none shrink-0"
                 style={{
@@ -156,7 +147,6 @@ export function ChromeGlassMockup({
                     gap:             `${8 * headerScale}px`,
                 }}
             >
-                {/* Left nav */}
                 <div className="flex items-center shrink-0" style={{ gap: `${navGap}px`, color: iconColor }}>
                     <div className="p-1.5">
                         <svg width={navBtnSize} height={navBtnSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -175,7 +165,6 @@ export function ChromeGlassMockup({
                     </div>
                 </div>
 
-                {/* URL bar */}
                 <div className="flex-1">
                     <div
                         className="rounded-full w-full flex items-center"
@@ -196,7 +185,6 @@ export function ChromeGlassMockup({
                     </div>
                 </div>
 
-                {/* Right icons: star + dots */}
                 <div className="flex items-center shrink-0" style={{ gap: `${rightGap}px`, color: iconColor }}>
                     <div className="p-1.5">
                         <svg style={{ width: `${iconSz * 0.85}px`, height: `${iconSz * 0.85}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +199,6 @@ export function ChromeGlassMockup({
                 </div>
             </div>
 
-            {/* Content */}
             <div
                 className="flex-1 relative overflow-hidden"
                 style={{

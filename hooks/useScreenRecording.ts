@@ -71,7 +71,6 @@ async function saveVideoToIndexedDB(blob: Blob, duration: number): Promise<strin
   });
 }
 
-
 // 3. Refactorización de loadVideoFromIndexedDB
 export async function loadVideoFromIndexedDB(): Promise<{ blob: Blob; duration: number; url: string; videoId: string } | null> {
   try {
@@ -153,7 +152,7 @@ const favicons = {
 };
 
 const titles = {
-  idle: "Freeshot - Crea tomas cinemáticas",
+  idle: "openvid - Crea tomas cinemáticas",
   countdown: (count: number) => `Grabando en ${count}...`,
   recording: "Grabando...",
   processing: "⏳ Procesando video...",
