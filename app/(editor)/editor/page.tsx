@@ -3,26 +3,36 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadVideoFromIndexedDB, deleteRecordedVideo } from "@/hooks/useScreenRecording";
+import { loadVideoFromIndexedDB } from "@/hooks/useScreenRecording";
 import { useVideoUpload } from "@/hooks/useVideoUpload";
 import { useVideoExport } from "@/hooks/useVideoExport";
 import { useVideoThumbnails } from "@/hooks/useVideoThumbnails";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { clearAllThumbnailCache } from "@/lib/thumbnail-cache";
-import type { ExportQuality, Tool, BackgroundTab, VideoCanvasHandle, BackgroundColorConfig, AspectRatio, CropArea, ZoomFragment } from "@/types";
+import type { ExportQuality, Tool, BackgroundTab, VideoCanvasHandle, BackgroundColorConfig, AspectRatio, CropArea, ZoomFragment, AudioTrack } from "@/types";
 import type { TrimRange } from "@/types/timeline.types";
 import type { MockupConfig } from "@/types/mockup.types";
+import type { EditorState } from "@/types/editor-state.types";
+import { createInitialEditorState } from "@/types/editor-state.types";
 import { DEFAULT_MOCKUP_CONFIG, getMockupDefaultConfig } from "@/types/mockup.types";
 import type { CanvasElement } from "@/types/canvas-elements.types";
 import { MOCKUPS } from "@/lib/mockup-data";
 import { gradientToCss, generateDefaultZoomFragments, createZoomFragment } from "@/types";
 import "../../globals.css";
 import { ToolsSidebar } from "@/app/components/ui/editor/ToolsSidebar";
+import { MobileToolsMenu } from "@/app/components/ui/editor/MobileToolsMenu";
+import { MobileControlPanel } from "@/app/components/ui/editor/MobileControlPanel";
 import { EditorTopBar } from "@/app/components/ui/editor/EditorTopBar";
-import { VideoCanvas, VIDEO_Z_INDEX } from "@/app/components/ui/editor/VideoCanvas";
+import { VideoCanvas } from "@/app/components/ui/editor/VideoCanvas";
 import { PlayerControls } from "@/app/components/ui/editor/PlayerControls";
 import { findValidFragmentPosition } from "@/app/components/ui/editor/ZoomFragmentTrackItem";
 import { LoadingSpinner } from "@/app/components/ui/LoadingSpinner";
 import { TimelineSkeleton } from "@/app/components/ui/Skeleton";
+import { AudioTrimModal } from "@/app/components/ui/editor/AudioTrimModal";
+import { VIDEO_Z_INDEX } from "@/lib/constants";
+import Image from "next/image";
+import Link from "next/link";
+import { TooltipAction } from "@/components/ui/tooltip-action";
 
 // Lazy load heavy components
 const ControlPanel = lazy(() => import("@/app/components/ui/editor/ControlPanel").then(mod => ({ default: mod.ControlPanel })));
@@ -30,28 +40,66 @@ const Timeline = lazy(() => import("@/app/components/ui/editor/Timeline").then(m
 const ExportOverlay = lazy(() => import("@/app/components/ui/ExportOverlay").then(mod => ({ default: mod.ExportOverlay })));
 const VideoCropperModal = lazy(() => import("@/app/components/ui/editor/VideoCropperModal").then(mod => ({ default: mod.VideoCropperModal })));
 
-
-// FUERA del componente, antes de export default:
 async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
     try {
         const url = URL.createObjectURL(blob);
-        const video = document.createElement("video");
-        video.src = url;
-        await new Promise<void>((resolve) => {
-            video.onloadedmetadata = () => resolve();
-            video.onerror = () => resolve();
+
+        return new Promise<boolean>((resolve) => {
+            const audioCtx = new AudioContext();
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                try {
+                    const arrayBuffer = e.target?.result as ArrayBuffer;
+                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+                    let hasSignal = false;
+                    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                        const data = audioBuffer.getChannelData(ch);
+                        for (let i = 0; i < Math.min(data.length, 10000); i++) {
+                            if (Math.abs(data[i]) > 0.001) {
+                                hasSignal = true;
+                                break;
+                            }
+                        }
+                        if (hasSignal) break;
+                    }
+
+                    await audioCtx.close();
+                    URL.revokeObjectURL(url);
+                    resolve(hasSignal);
+                } catch {
+                    await audioCtx.close();
+                    URL.revokeObjectURL(url);
+                    resolve(false);
+                }
+            };
+
+            reader.onerror = () => {
+                audioCtx.close();
+                URL.revokeObjectURL(url);
+                resolve(false);
+            };
+
+            reader.readAsArrayBuffer(blob);
         });
-        // audioTracks es la API estándar — funciona en Chrome/Edge/Firefox
-        const videoEl = video as HTMLVideoElement & { audioTracks?: { length: number } };
-        const hasAudio = (videoEl.audioTracks?.length ?? 0) > 0;
-        URL.revokeObjectURL(url);
-        return hasAudio;
     } catch {
         return true; // en caso de error, asumir que tiene audio
     }
 }
 
 export default function Editor() {
+    // Undo/Redo system - centralized state management
+    const {
+        state: editorState,
+        setState: setEditorState,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
+        clearHistory,
+    } = useUndoRedo<EditorState>(createInitialEditorState());
+
     const [activeTool, setActiveTool] = useState<Tool>("screenshot");
     const [backgroundTab, setBackgroundTab] = useState<BackgroundTab>("wallpaper");
     const [selectedWallpaper, setSelectedWallpaper] = useState(0);
@@ -60,6 +108,7 @@ export default function Editor() {
     const [roundedCorners, setRoundedCorners] = useState(10);
     const [shadows, setShadows] = useState(10);
     const [isControlPanelOpen, setIsControlPanelOpen] = useState(true);
+    const [isMobileControlPanelOpen, setIsMobileControlPanelOpen] = useState(false);
 
     // Video transform state (rotation and position)
     const [videoTransform, setVideoTransform] = useState<{ rotation: number; translateX: number; translateY: number }>({
@@ -121,7 +170,7 @@ export default function Editor() {
     const animationFrameRef = useRef<number | null>(null);
     const justEndedRef = useRef<boolean>(false);
     const wasPlayingBeforeDragRef = useRef<boolean>(false);
-
+    const isExportingRef = useRef(false);
     const [scrubTime, setScrubTime] = useState<number>(0);
 
     // Zoom fragments state
@@ -148,6 +197,13 @@ export default function Editor() {
     const [muteOriginalAudio, setMuteOriginalAudio] = useState<boolean>(false);
     const [masterVolume, setMasterVolume] = useState<number>(1);
     const [selectedAudioTrackId, setSelectedAudioTrackId] = useState<string | null>(null);
+
+    // Audio trim modal state
+    const [autoTrimModalOpen, setAutoTrimModalOpen] = useState(false);
+    const [pendingAudioUpload, setPendingAudioUpload] = useState<{
+        audio: import("@/types/audio.types").UploadedAudio;
+        trackId: string;
+    } | null>(null);
 
     // Audio playback refs - store HTML Audio elements for each track
     const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -193,6 +249,7 @@ export default function Editor() {
 
     // Sync audio playback with video current time
     const syncAudioPlayback = useCallback((videoTime: number, playing: boolean) => {
+        if (isExportingRef.current) return;
         const currentElements = audioElementsRef.current;
 
         for (const track of audioTracks) {
@@ -201,13 +258,12 @@ export default function Editor() {
 
             const trackStart = track.startTime;
             const trackEnd = track.startTime + track.duration;
+            const trimStart = track.trimStart ?? 0; // ← añadir esto
 
-            // Check if current video time is within this track's range
             if (videoTime >= trackStart && videoTime < trackEnd) {
-                // Calculate the audio element's current time relative to track start
-                const audioTime = videoTime - trackStart;
+                // El tiempo dentro del archivo de audio = trimStart + offset desde el inicio del track
+                const audioTime = trimStart + (videoTime - trackStart); // ← antes era solo (videoTime - trackStart)
 
-                // Only seek if there's a significant difference (avoid micro-seeks)
                 if (Math.abs(audioEl.currentTime - audioTime) > 0.1) {
                     audioEl.currentTime = audioTime;
                 }
@@ -218,7 +274,6 @@ export default function Editor() {
                     audioEl.pause();
                 }
             } else {
-                // Outside this track's range - pause if playing
                 if (!audioEl.paused) {
                     audioEl.pause();
                 }
@@ -237,6 +292,77 @@ export default function Editor() {
             elementsRef.clear();
         };
     }, []);
+
+    // ====================
+    // Undo/Redo Sync - Bidirectional state synchronization
+    // ====================
+
+    // Sync individual states → editorState (for history tracking)
+    // Debounced to avoid creating history entries on every keystroke
+    const updateEditorStateDebounced = useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => {
+        if (updateEditorStateDebounced.current) {
+            clearTimeout(updateEditorStateDebounced.current);
+        }
+        updateEditorStateDebounced.current = setTimeout(() => {
+            setEditorState({
+                backgroundTab,
+                selectedWallpaper,
+                backgroundBlur,
+                padding,
+                roundedCorners,
+                shadows,
+                selectedImageUrl,
+                backgroundColorConfig,
+                aspectRatio,
+                customDimensions,
+                cropArea,
+                trimRange,
+                zoomFragments,
+                mockupId,
+                mockupConfig,
+                canvasElements,
+                audioTracks,
+                muteOriginalAudio,
+                masterVolume,
+            });
+        }, 300);
+        return () => {
+            if (updateEditorStateDebounced.current) {
+                clearTimeout(updateEditorStateDebounced.current);
+            }
+        };
+    }, [
+        backgroundTab, selectedWallpaper, backgroundBlur, padding,
+        roundedCorners, shadows, selectedImageUrl, backgroundColorConfig,
+        aspectRatio, customDimensions, cropArea, trimRange,
+        zoomFragments, mockupId, mockupConfig, canvasElements,
+        audioTracks, muteOriginalAudio, masterVolume,
+        setEditorState
+    ]);
+
+    // Sync editorState → individual states (from undo/redo)
+    useEffect(() => {
+        setBackgroundTab(editorState.backgroundTab);
+        setSelectedWallpaper(editorState.selectedWallpaper);
+        setBackgroundBlur(editorState.backgroundBlur);
+        setPadding(editorState.padding);
+        setRoundedCorners(editorState.roundedCorners);
+        setShadows(editorState.shadows);
+        setSelectedImageUrl(editorState.selectedImageUrl);
+        setBackgroundColorConfig(editorState.backgroundColorConfig);
+        setAspectRatio(editorState.aspectRatio);
+        setCustomDimensions(editorState.customDimensions);
+        setCropArea(editorState.cropArea);
+        setTrimRange(editorState.trimRange);
+        setZoomFragments(editorState.zoomFragments);
+        setMockupId(editorState.mockupId);
+        setMockupConfig(editorState.mockupConfig);
+        setCanvasElements(editorState.canvasElements);
+        setAudioTracks(editorState.audioTracks);
+        setMuteOriginalAudio(editorState.muteOriginalAudio);
+        setMasterVolume(editorState.masterVolume);
+    }, [editorState]);
 
     // Handler para cambiar el mockup
     const handleMockupChange = useCallback((newMockupId: string) => {
@@ -344,6 +470,13 @@ export default function Editor() {
     // Audio handlers
     const handleAudioUpload = useCallback(async (file: File) => {
         try {
+            // Check max tracks limit first
+            const MAX_AUDIO_TRACKS = 5;
+            if (audioTracks.length >= MAX_AUDIO_TRACKS) {
+                alert(`Máximo ${MAX_AUDIO_TRACKS} pistas de audio permitidas.`);
+                return;
+            }
+
             // Create blob URL
             const url = URL.createObjectURL(file);
 
@@ -364,11 +497,42 @@ export default function Editor() {
             };
 
             setUploadedAudios(prev => [...prev, newAudio]);
+
+            // Automatically add to timeline
+            const lastTrackEnd = audioTracks.reduce((max, track) =>
+                Math.max(max, track.startTime + track.duration), 0);
+
+            const trackId = `track-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+            // Check if audio exceeds video duration
+            if (audio.duration > videoDuration) {
+                // Show trim modal automatically
+                setPendingAudioUpload({ audio: newAudio, trackId });
+                setAutoTrimModalOpen(true);
+            } else {
+                // Add track normally
+                const newTrack: import("@/types/audio.types").AudioTrack = {
+                    id: trackId,
+                    audioId: newAudio.id,
+                    name: newAudio.name,
+                    startTime: lastTrackEnd,
+                    duration: newAudio.duration,
+                    volume: 1,
+                    loop: false,
+                };
+
+                setAudioTracks(prev => [...prev, newTrack]);
+
+                // Auto-mute original audio when first track is added
+                if (audioTracks.length === 0) {
+                    setMuteOriginalAudio(true);
+                }
+            }
         } catch (error) {
             console.error('Error uploading audio:', error);
             alert('Error al subir el audio. Por favor intenta de nuevo.');
         }
-    }, []);
+    }, [audioTracks, videoDuration]);
 
     const handleAudioDelete = useCallback((audioId: string) => {
         // Remove from uploaded audios
@@ -444,6 +608,16 @@ export default function Editor() {
         setMasterVolume(volume);
     }, []);
 
+    const handleSelectAudioTrack = useCallback((trackId: string | null) => {
+        setSelectedAudioTrackId(trackId);
+        // Clear zoom fragment selection when selecting audio track
+        if (trackId) {
+            setSelectedZoomFragmentId(null);
+            // Activate audio tool in sidebar
+            setActiveTool("audio");
+        }
+    }, []);
+
     // Genere Thumbnails de alta calidad y su generacion de intervalo corto para que el scrubbing se sienta instantáneo
     const { getThumbnailForTime } = useVideoThumbnails(
         videoUrl,
@@ -460,12 +634,16 @@ export default function Editor() {
     const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
     const handleExport = (quality: ExportQuality) => {
+        isExportingRef.current = true;
+        for (const audioEl of audioElementsRef.current.values()) {
+            audioEl.pause();
+        }
+
         exportVideo({
             quality,
             videoBlob: videoBlob ?? undefined,
             transparentBackground: selectedWallpaper === -1,
             trim: trimRange.end > trimRange.start ? { start: trimRange.start, end: trimRange.end } : undefined,
-            // Audio settings
             muteOriginalAudio,
             audioTracks: audioTracks.map(track => {
                 const audio = uploadedAudios.find(a => a.id === track.audioId);
@@ -473,11 +651,13 @@ export default function Editor() {
                     audioUrl: audio?.url || '',
                     startTime: track.startTime,
                     duration: track.duration,
+                    trimStart: track.trimStart ?? 0,
                     volume: track.volume,
                     loop: track.loop,
                 };
             }),
             masterVolume,
+        }).finally(() => {
         });
     };
     const [videoHasAudioTrack, setVideoHasAudioTrack] = useState<boolean>(true);
@@ -490,15 +670,17 @@ export default function Editor() {
             if (!hasAudio) setMuteOriginalAudio(true);
         });
         try {
-            // Clear any existing recorded video and thumbnails
-            await deleteRecordedVideo();
+            // Clear thumbnail cache only (don't delete recorded videos to avoid DB corruption)
             await clearAllThumbnailCache();
         } catch (error) {
-            console.warn("Failed to clear previous video:", error);
+            console.warn("Failed to clear thumbnails:", error);
         }
 
         const uploadedData = await uploadVideo(file);
         if (uploadedData) {
+            // Update ref to track this as the current video
+            lastLoadedVideoIdRef.current = uploadedData.videoId;
+
             setVideoUrl(uploadedData.url);
             setVideoId(uploadedData.videoId);
             setVideoDuration(uploadedData.duration);
@@ -514,43 +696,72 @@ export default function Editor() {
             // Reset playback state
             setCurrentTime(0);
             setIsPlaying(false);
+
+            // Clear undo/redo history when uploading a new video (longer timeout to ensure all states sync)
+            setTimeout(() => clearHistory(), 200);
         }
-    }, [uploadVideo]);
+    }, [uploadVideo, clearHistory]);
+
+    // Track last loaded video to detect changes
+    const lastLoadedVideoIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         const loadVideo = async () => {
             try {
-                // Try loading recorded video first
-                let videoData = await loadVideoFromIndexedDB();
+                // Load both videos and compare timestamps to get the most recent
+                const [uploadedData, recordedData] = await Promise.all([
+                    loadUploadedVideo(),
+                    loadVideoFromIndexedDB()
+                ]);
 
-                // If no recorded video, try loading uploaded video
-                if (!videoData) {
-                    const uploadedData = await loadUploadedVideo();
-                    if (uploadedData) {
-                        videoData = {
-                            url: uploadedData.url,
-                            videoId: uploadedData.videoId,
-                            duration: uploadedData.duration,
-                            blob: new Blob(), // Not needed for display
-                        };
-                        setAspectRatio(uploadedData.aspectRatio);
-                        setVideoDimensions({ width: uploadedData.width, height: uploadedData.height });
-                    }
-                } else if (videoData.blob && videoData.blob.size > 0) {
-                    setVideoBlob(videoData.blob);
-                    detectVideoHasAudio(videoData.blob).then(hasAudio => {
-                        setVideoHasAudioTrack(hasAudio);
-                        if (!hasAudio) setMuteOriginalAudio(true);
-                    });
+                // Determine which video is more recent
+                let videoToLoad: typeof uploadedData | typeof recordedData = null;
+
+                if (uploadedData && recordedData) {
+                    // Both exist - load the most recent one based on timestamp
+                    videoToLoad = uploadedData.timestamp > recordedData.timestamp ? uploadedData : recordedData;
+                } else if (uploadedData) {
+                    videoToLoad = uploadedData;
+                } else if (recordedData) {
+                    videoToLoad = recordedData;
                 }
 
-                if (videoData) {
-                    setVideoUrl(videoData.url);
-                    setVideoId(videoData.videoId);
-                    setVideoDuration(videoData.duration);
-                    setTrimRange({ start: 0, end: videoData.duration });
-                    const defaultFragments = generateDefaultZoomFragments(videoData.duration);
-                    setZoomFragments(defaultFragments);
+                // Load the selected video
+                if (videoToLoad) {
+                    // Only reload if this is a different video
+                    if (lastLoadedVideoIdRef.current !== videoToLoad.videoId) {
+                        lastLoadedVideoIdRef.current = videoToLoad.videoId;
+
+                        setVideoUrl(videoToLoad.url);
+                        setVideoId(videoToLoad.videoId);
+                        setVideoDuration(videoToLoad.duration);
+                        setTrimRange({ start: 0, end: videoToLoad.duration });
+                        const defaultFragments = generateDefaultZoomFragments(videoToLoad.duration);
+                        setZoomFragments(defaultFragments);
+
+                        // Set aspect ratio and dimensions for uploaded videos
+                        if ('aspectRatio' in videoToLoad) {
+                            setAspectRatio(videoToLoad.aspectRatio || "auto");
+                            if (videoToLoad.width && videoToLoad.height) {
+                                setVideoDimensions({ width: videoToLoad.width, height: videoToLoad.height });
+                            }
+                        }
+
+                        // Set blob for recorded videos
+                        if ('blob' in videoToLoad && videoToLoad.blob && videoToLoad.blob.size > 0) {
+                            setVideoBlob(videoToLoad.blob);
+                            detectVideoHasAudio(videoToLoad.blob).then(hasAudio => {
+                                setVideoHasAudioTrack(hasAudio);
+                                if (!hasAudio) setMuteOriginalAudio(true);
+                            });
+                        }
+
+                        // Clear undo/redo history when loading a new video
+                        // Use longer timeout to ensure all state updates complete first
+                        setTimeout(() => {
+                            clearHistory();
+                        }, 200);
+                    }
                 }
 
             } catch (error) {
@@ -559,7 +770,17 @@ export default function Editor() {
         };
 
         loadVideo();
-    }, [loadUploadedVideo]);
+
+        // Re-check when page becomes visible (user navigates back or uploads new video)
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                loadVideo();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [loadUploadedVideo, clearHistory]);
 
     useEffect(() => {
         if (uploadedImages.length > 0) {
@@ -567,12 +788,46 @@ export default function Editor() {
         }
     }, [uploadedImages]);
 
-    // Mute/unmute original video audio
     useEffect(() => {
         if (videoRef.current) {
             videoRef.current.muted = muteOriginalAudio;
         }
     }, [muteOriginalAudio]);
+
+    // Keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Check if any input field is focused
+            const target = e.target as HTMLElement;
+            const isInputFocused = target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.isContentEditable;
+
+            // Don't trigger shortcuts if typing in an input
+            if (isInputFocused) return;
+
+            // Ctrl+Z or Cmd+Z for undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                if (canUndo) {
+                    undo();
+                }
+            }
+
+            // Ctrl+Y or Cmd+Y for redo (Windows)
+            // Ctrl+Shift+Z or Cmd+Shift+Z for redo (Mac)
+            if (((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                if (canRedo) {
+                    redo();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [undo, redo, canUndo, canRedo]);
 
     const togglePlayPause = useCallback(() => {
         if (videoRef.current) {
@@ -701,17 +956,29 @@ export default function Editor() {
         }
     };
 
-    const skipBackward = () => {
+    const skipBackward = useCallback(() => {
         if (videoRef.current) {
-            videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 5);
+            const newTime = Math.max(trimRange.start, videoRef.current.currentTime - 5);
+            videoRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+            syncAudioPlayback(newTime, isPlaying);
         }
-    };
+    }, [trimRange.start, isPlaying, syncAudioPlayback]);
 
-    const skipForward = () => {
+    const skipForward = useCallback(() => {
         if (videoRef.current) {
-            videoRef.current.currentTime = Math.min(videoDuration, videoRef.current.currentTime + 5);
+            const newTime = Math.min(trimRange.end, videoRef.current.currentTime + 5);
+            videoRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+            syncAudioPlayback(newTime, isPlaying);
+
+            if (newTime >= trimRange.end) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+                syncAudioPlayback(newTime, false);
+            }
         }
-    };
+    }, [trimRange.end, isPlaying, syncAudioPlayback]);
 
     const handleSeek = useCallback((time: number) => {
         setScrubTime(time);
@@ -774,6 +1041,10 @@ export default function Editor() {
     // Zoom fragment handlers
     const handleSelectZoomFragment = useCallback((fragmentId: string | null) => {
         setSelectedZoomFragmentId(fragmentId);
+        // Clear audio track selection when selecting zoom fragment
+        if (fragmentId) {
+            setSelectedAudioTrackId(null);
+        }
     }, []);
 
     const handleActivateZoomTool = useCallback(() => {
@@ -958,116 +1229,120 @@ export default function Editor() {
     return (
         <div className="flex flex-col h-screen w-full bg-[#0E0E12] text-white/60 font-sans overflow-hidden select-none">
             <div className="flex flex-1 overflow-hidden">
-                {/* Tools Sidebar */}
-                <ToolsSidebar
-                    activeTool={activeTool}
-                    onToolChange={setActiveTool}
-                    onVideoUpload={handleVideoUpload}
-                    isUploading={isUploading}
-                />
+                <div className="hidden lg:flex">
+                    <ToolsSidebar
+                        activeTool={activeTool}
+                        onToolChange={setActiveTool}
+                        onVideoUpload={handleVideoUpload}
+                        isUploading={isUploading}
+                    />
+                </div>
 
-                {/* Control Panel */}
-                <AnimatePresence mode="wait">
-                    {isControlPanelOpen && (
-                        <motion.div
-                            key="control-panel"
-                            initial={{ x: -320, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            exit={{ x: -320, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            <Suspense fallback={
-                                <div className="w-[320px] h-screen bg-[#141417] border-r border-white/10 flex items-center justify-center">
-                                    <LoadingSpinner message="Cargando panel..." />
-                                </div>
-                            }>
-                                <ControlPanel
-                                    activeTool={activeTool}
-                                    backgroundTab={backgroundTab}
-                                    onBackgroundTabChange={handleBackgroundTabChange}
-                                    selectedWallpaper={selectedWallpaper}
-                                    onWallpaperSelect={handleWallpaperSelect}
-                                    backgroundBlur={backgroundBlur}
-                                    onBackgroundBlurChange={setBackgroundBlur}
-                                    padding={padding}
-                                    onPaddingChange={setPadding}
-                                    roundedCorners={roundedCorners}
-                                    onRoundedCornersChange={handleRoundedCornersChange}
-                                    shadows={shadows}
-                                    onShadowsChange={setShadows}
-                                    uploadedImages={uploadedImages}
-                                    selectedImageUrl={selectedImageUrl}
-                                    onImageUpload={handleImageUpload}
-                                    onImageSelect={handleImageSelect}
-                                    onImageRemove={handleImageRemove}
-                                    backgroundColorConfig={backgroundColorConfig}
-                                    onBackgroundColorChange={handleBackgroundColorChange}
-                                    onTogglePanel={() => setIsControlPanelOpen(!isControlPanelOpen)}
-                                    isOpen={isControlPanelOpen}
-                                    // Zoom props
-                                    zoomFragments={zoomFragments}
-                                    selectedZoomFragment={selectedZoomFragment}
-                                    onSelectZoomFragment={handleSelectZoomFragment}
-                                    onAddZoomFragment={() => handleAddZoomFragment(currentTime)}
-                                    onUpdateZoomFragment={handleUpdateZoomFragment}
-                                    onDeleteZoomFragment={handleDeleteZoomFragment}
-                                    videoUrl={videoUrl}
-                                    videoThumbnail={selectedZoomFragment ? getThumbnailForTime(selectedZoomFragment.startTime)?.dataUrl ?? null : null}
-                                    currentTime={currentTime}
-                                    getThumbnailForTime={getThumbnailForTime}
-                                    videoDimensions={customAspectRatio}
-                                    // Mockup props
-                                    mockupId={mockupId}
-                                    mockupConfig={mockupConfig}
-                                    onMockupChange={handleMockupChange}
-                                    onMockupConfigChange={handleMockupConfigChange}
-                                    // Canvas elements props
-                                    onAddCanvasElement={addCanvasElement}
-                                    selectedCanvasElement={canvasElements.find(el => el.id === selectedElementId) || null}
-                                    onUpdateCanvasElement={updateCanvasElement}
-                                    onDeleteCanvasElement={deleteCanvasElement}
-                                    onBringToFront={bringToFront}
-                                    onSendToBack={sendToBack}
-                                    // Audio props
-                                    uploadedAudios={uploadedAudios}
-                                    audioTracks={audioTracks}
-                                    muteOriginalAudio={muteOriginalAudio}
-                                    masterVolume={masterVolume}
-                                    onAudioUpload={handleAudioUpload}
-                                    onAudioDelete={handleAudioDelete}
-                                    onAddAudioTrack={handleAddAudioTrack}
-                                    onUpdateAudioTrack={handleUpdateAudioTrack}
-                                    onDeleteAudioTrack={handleDeleteAudioTrack}
-                                    onToggleMuteOriginalAudio={handleToggleMuteOriginalAudio}
-                                    onMasterVolumeChange={handleMasterVolumeChange}
-                                    videoDuration={videoDuration}
-                                    videoHasAudioTrack={videoHasAudioTrack}
-                                />
-                            </Suspense>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <div className="hidden lg:block">
+                    <AnimatePresence mode="wait">
+                        {isControlPanelOpen && (
+                            <motion.div
+                                key="control-panel"
+                                initial={{ x: -320, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                exit={{ x: -320, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                            >
+                                <Suspense fallback={
+                                    <div className="w-[320px] h-screen bg-[#141417] border-r border-white/10 flex items-center justify-center">
+                                        <LoadingSpinner message="Cargando panel..." />
+                                    </div>
+                                }>
+                                    <ControlPanel
+                                        activeTool={activeTool}
+                                        backgroundTab={backgroundTab}
+                                        onBackgroundTabChange={handleBackgroundTabChange}
+                                        selectedWallpaper={selectedWallpaper}
+                                        onWallpaperSelect={handleWallpaperSelect}
+                                        backgroundBlur={backgroundBlur}
+                                        onBackgroundBlurChange={setBackgroundBlur}
+                                        padding={padding}
+                                        onPaddingChange={setPadding}
+                                        roundedCorners={roundedCorners}
+                                        onRoundedCornersChange={handleRoundedCornersChange}
+                                        shadows={shadows}
+                                        onShadowsChange={setShadows}
+                                        uploadedImages={uploadedImages}
+                                        selectedImageUrl={selectedImageUrl}
+                                        onImageUpload={handleImageUpload}
+                                        onImageSelect={handleImageSelect}
+                                        onImageRemove={handleImageRemove}
+                                        backgroundColorConfig={backgroundColorConfig}
+                                        onBackgroundColorChange={handleBackgroundColorChange}
+                                        onTogglePanel={() => setIsControlPanelOpen(!isControlPanelOpen)}
+                                        isOpen={isControlPanelOpen}
+                                        // Zoom props
+                                        zoomFragments={zoomFragments}
+                                        selectedZoomFragment={selectedZoomFragment}
+                                        onSelectZoomFragment={handleSelectZoomFragment}
+                                        onAddZoomFragment={() => handleAddZoomFragment(currentTime)}
+                                        onUpdateZoomFragment={handleUpdateZoomFragment}
+                                        onDeleteZoomFragment={handleDeleteZoomFragment}
+                                        videoUrl={videoUrl}
+                                        videoThumbnail={selectedZoomFragment ? getThumbnailForTime(selectedZoomFragment.startTime)?.dataUrl ?? null : null}
+                                        currentTime={currentTime}
+                                        getThumbnailForTime={getThumbnailForTime}
+                                        videoDimensions={customAspectRatio}
+                                        // Mockup props
+                                        mockupId={mockupId}
+                                        mockupConfig={mockupConfig}
+                                        onMockupChange={handleMockupChange}
+                                        onMockupConfigChange={handleMockupConfigChange}
+                                        // Canvas elements props
+                                        onAddCanvasElement={addCanvasElement}
+                                        selectedCanvasElement={canvasElements.find(el => el.id === selectedElementId) || null}
+                                        onUpdateCanvasElement={updateCanvasElement}
+                                        onDeleteCanvasElement={deleteCanvasElement}
+                                        onBringToFront={bringToFront}
+                                        onSendToBack={sendToBack}
+                                        // Audio props
+                                        uploadedAudios={uploadedAudios}
+                                        audioTracks={audioTracks}
+                                        muteOriginalAudio={muteOriginalAudio}
+                                        masterVolume={masterVolume}
+                                        onAudioUpload={handleAudioUpload}
+                                        onAudioDelete={handleAudioDelete}
+                                        onAddAudioTrack={handleAddAudioTrack}
+                                        onUpdateAudioTrack={handleUpdateAudioTrack}
+                                        onDeleteAudioTrack={handleDeleteAudioTrack}
+                                        onToggleMuteOriginalAudio={handleToggleMuteOriginalAudio}
+                                        onMasterVolumeChange={handleMasterVolumeChange}
+                                        videoDuration={videoDuration}
+                                        videoHasAudioTrack={videoHasAudioTrack}
+                                    />
+                                </Suspense>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
-                {/* Main Editor Area */}
                 <div
                     ref={editorAreaRef}
-                    className="flex-1 bg-[#09090B] flex flex-col relative overflow-hidden"
+                    className="flex-1 bg-[#09090B] flex flex-col relative overflow-hidden min-w-0"
                 >
                     <AnimatePresence>
                         {!isControlPanelOpen && (
-                            <motion.button
-                                initial={{ x: -100, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: -100, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: "easeInOut", delay: 0.15 }}
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setIsControlPanelOpen(true)}
-                                className="absolute top-2 left-4 z-50 p-2 squircle-element bg-[#18181b] border border-white/10 text-white hover:bg-[#252529] transition-all duration-200 shadow-lg"
-                                title="Abrir panel de control"
-                            >
-                                <Icon icon="lucide:sidebar-open" width="20" />
-                            </motion.button>
+                            <TooltipAction label="Abrir panel de control" side="right">
+                                <motion.button
+                                    initial={{ x: -100, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: -100, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut", delay: 0.15 }}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setIsControlPanelOpen(true)}
+                                    className="absolute top-2 left-4 z-50 p-2 flex items-center gap-2 squircle-element bg-[#18181b] border border-white/10 text-white hover:bg-[#252529] transition-all duration-200 shadow-lg"
+                                >
+                                    <Link href="/" className="block sm:hidden"><Image src="/svg/logo-openvid.svg" alt="Logo" width={24} height={24} className="hover:opacity-80 transition-opacity" /></Link>
+                                    <Icon icon="lucide:sidebar-open" width="20" className="hidden sm:block"
+                                    />
+                                </motion.button>
+                            </TooltipAction>
                         )}
                     </AnimatePresence>
 
@@ -1075,9 +1350,12 @@ export default function Editor() {
                         onExport={handleExport}
                         exportProgress={exportProgress}
                         hasTransparentBackground={selectedWallpaper === -1}
+                        onUndo={undo}
+                        onRedo={redo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
                     />
 
-                    {/* Video Canvas */}
                     <VideoCanvas
                         ref={canvasRef}
                         videoUrl={videoUrl}
@@ -1128,7 +1406,6 @@ export default function Editor() {
                         }}
                     />
 
-                    {/* Player Controls */}
                     <PlayerControls
                         isPlaying={isPlaying}
                         currentTime={currentTime}
@@ -1170,7 +1447,7 @@ export default function Editor() {
                             audioTracks={audioTracks}
                             uploadedAudios={uploadedAudios}
                             selectedAudioTrackId={selectedAudioTrackId}
-                            onSelectAudioTrack={setSelectedAudioTrackId}
+                            onSelectAudioTrack={handleSelectAudioTrack}
                             onUpdateAudioTrack={handleUpdateAudioTrack}
                         />
                     </Suspense>
@@ -1178,6 +1455,74 @@ export default function Editor() {
                 </div>
 
             </div>
+
+            <MobileToolsMenu
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                onVideoUpload={handleVideoUpload}
+                isUploading={isUploading}
+                onOpenToolPanel={() => setIsMobileControlPanelOpen(true)}
+            />
+
+            <MobileControlPanel
+                isOpen={isMobileControlPanelOpen}
+                onClose={() => setIsMobileControlPanelOpen(false)}
+                activeTool={activeTool}
+                backgroundTab={backgroundTab}
+                onBackgroundTabChange={handleBackgroundTabChange}
+                selectedWallpaper={selectedWallpaper}
+                onWallpaperSelect={handleWallpaperSelect}
+                backgroundBlur={backgroundBlur}
+                onBackgroundBlurChange={setBackgroundBlur}
+                padding={padding}
+                onPaddingChange={setPadding}
+                roundedCorners={roundedCorners}
+                onRoundedCornersChange={handleRoundedCornersChange}
+                shadows={shadows}
+                onShadowsChange={setShadows}
+                uploadedImages={uploadedImages}
+                selectedImageUrl={selectedImageUrl}
+                onImageUpload={handleImageUpload}
+                onImageSelect={handleImageSelect}
+                onImageRemove={handleImageRemove}
+                backgroundColorConfig={backgroundColorConfig}
+                onBackgroundColorChange={handleBackgroundColorChange}
+                zoomFragments={zoomFragments}
+                selectedZoomFragment={selectedZoomFragment}
+                onSelectZoomFragment={handleSelectZoomFragment}
+                onAddZoomFragment={() => handleAddZoomFragment(currentTime)}
+                onUpdateZoomFragment={handleUpdateZoomFragment}
+                onDeleteZoomFragment={handleDeleteZoomFragment}
+                videoUrl={videoUrl}
+                videoThumbnail={selectedZoomFragment ? getThumbnailForTime(selectedZoomFragment.startTime)?.dataUrl ?? null : null}
+                currentTime={currentTime}
+                getThumbnailForTime={getThumbnailForTime}
+                videoDimensions={videoDimensions}
+                mockupId={mockupId}
+                mockupConfig={mockupConfig}
+                onMockupChange={handleMockupChange}
+                onMockupConfigChange={handleMockupConfigChange}
+                onAddCanvasElement={addCanvasElement}
+                selectedCanvasElement={canvasElements.find(el => el.id === selectedElementId) || null}
+                onUpdateCanvasElement={updateCanvasElement}
+                onDeleteCanvasElement={deleteCanvasElement}
+                onBringToFront={bringToFront}
+                onSendToBack={sendToBack}
+                uploadedAudios={uploadedAudios}
+                audioTracks={audioTracks}
+                muteOriginalAudio={muteOriginalAudio}
+                masterVolume={masterVolume}
+                onAudioUpload={handleAudioUpload}
+                onAudioDelete={handleAudioDelete}
+                onAddAudioTrack={handleAddAudioTrack}
+                onUpdateAudioTrack={handleUpdateAudioTrack}
+                onDeleteAudioTrack={handleDeleteAudioTrack}
+                onToggleMuteOriginalAudio={handleToggleMuteOriginalAudio}
+                onMasterVolumeChange={handleMasterVolumeChange}
+                videoDuration={videoDuration}
+                videoHasAudioTrack={videoHasAudioTrack}
+            />
+
             <Suspense fallback={null}>
                 <ExportOverlay
                     exportProgress={exportProgress}
@@ -1194,6 +1539,53 @@ export default function Editor() {
                     initialCrop={cropArea}
                 />
             </Suspense>
+
+            {autoTrimModalOpen && pendingAudioUpload && (
+                <AudioTrimModal
+                    key={pendingAudioUpload.audio.id}
+                    isOpen={autoTrimModalOpen}
+                    audioName={pendingAudioUpload.audio.name}
+                    audioUrl={pendingAudioUpload.audio.url}
+                    audioDuration={pendingAudioUpload.audio.duration}
+                    initialTrimStart={0}
+                    initialTrimEnd={Math.min(pendingAudioUpload.audio.duration, videoDuration)}
+                    onConfirm={(trimStart, trimEnd) => {
+                        if (pendingAudioUpload) {
+                            const lastTrackEnd = audioTracks.reduce((max, track) =>
+                                Math.max(max, track.startTime + track.duration), 0);
+
+                            const newTrack: AudioTrack = {
+                                id: pendingAudioUpload.trackId,
+                                audioId: pendingAudioUpload.audio.id,
+                                name: pendingAudioUpload.audio.name,
+                                startTime: lastTrackEnd,
+                                duration: trimEnd - trimStart,
+                                trimStart: trimStart,  // ← NUEVO
+                                volume: 1,
+                                loop: false,
+                            };
+
+                            setAudioTracks(prev => [...prev, newTrack]);
+
+                            // Auto-mute original audio when first track is added
+                            if (audioTracks.length === 0) {
+                                setMuteOriginalAudio(true);
+                            }
+                        }
+                        setAutoTrimModalOpen(false);
+                        setPendingAudioUpload(null);
+                    }}
+                    onCancel={() => {
+                        // Remove the uploaded audio if user cancels
+                        if (pendingAudioUpload) {
+                            setUploadedAudios(prev => prev.filter(a => a.id !== pendingAudioUpload.audio.id));
+                            URL.revokeObjectURL(pendingAudioUpload.audio.url);
+                        }
+                        setAutoTrimModalOpen(false);
+                        setPendingAudioUpload(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
