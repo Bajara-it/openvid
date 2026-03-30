@@ -16,10 +16,11 @@
 > **El siguiente demo fue grabado y editado completamente con openvid.**
 
 <div align="center">
-  <video width="100%" controls autoplay loop muted src="https://openvid.dev/images/pages/demo.mp4">
-    Tu navegador no soporta la etiqueta de video.
+  <video src="https://openvid.dev/images/pages/demo.mp4" width="100%" controls autoplay muted loop>
+    Tu navegador no admite el elemento de video.
   </video>
 </div>
+
 
 ---
 
