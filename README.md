@@ -58,9 +58,11 @@ Dale contexto a tu demo con marcos profesionales:
 - Arc
 - Samsung
 
-### Zoom inteligente
+### Zoom
 - Zoom en/out en momentos exactos del video
 - Control de velocidad y suavizado de la transición
+- **Movimiento de Cámara 3D** - Inclinación (Tilt) y rotación dinámica basada en puntos de interés.
+- **Perspectiva Ajustable** - Control total sobre los ejes X e Y para simular profundidad espacial.
 
 ### Audio
 - Multipista - añade música o efectos de sonido
