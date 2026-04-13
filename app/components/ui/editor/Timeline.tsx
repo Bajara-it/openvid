@@ -8,6 +8,7 @@ import type { TimelineProps } from "@/types/timeline.types";
 import LabelSidebar from "./LabelSidebar";
 import { ZoomFragmentTrackItem, findValidFragmentPosition } from "./ZoomFragmentTrackItem";
 import { AudioFragmentTrackItem } from "./AudioFragmentTrackItem";
+import { VideoClipTrackItem } from "./VideoClipTrackItem";
 import { Icon } from "@iconify/react";
 
 // Default duration for new zoom fragments (in seconds)
@@ -24,6 +25,12 @@ export function Timeline({
     onDragEnd,
     trimRange,
     onTrimChange,
+    // Video clips props
+    videoClips = [],
+    selectedVideoClipId,
+    onSelectVideoClip,
+    onUpdateVideoClip,
+    onDeleteVideoClip,
     // Zoom props
     zoomFragments = [],
     selectedZoomFragmentId,
@@ -44,6 +51,8 @@ export function Timeline({
     const [isDragging, setIsDragging] = useState(false);
     const [isDraggingTrim, setIsDraggingTrim] = useState<'start' | 'end' | null>(null);
     const [isDraggingZoomFragment, setIsDraggingZoomFragment] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [isDraggingVideoClip, setIsDraggingVideoClip] = useState(false);
     const [isOverFragment, setIsOverFragment] = useState(false);
 
     const pendingSeekRef = useRef<number | null>(null);
@@ -51,7 +60,14 @@ export function Timeline({
     const isSeekingRef = useRef<boolean>(false);
     const [isHoveringZoomRow, setIsHoveringZoomRow] = useState(false);
     const [ghostX, setGhostX] = useState(0);
-    const validDuration = Number.isFinite(videoDuration) && videoDuration > 0 ? videoDuration : 0;
+    const validDuration = useMemo(() => {
+        if (videoClips.length > 0) {
+            // Duración total = fin del último clip
+            const lastClipEnd = Math.max(...videoClips.map(c => c.startTime + (c.trimEnd - c.trimStart)));
+            return Number.isFinite(lastClipEnd) && lastClipEnd > 0 ? lastClipEnd : 0;
+        }
+        return Number.isFinite(videoDuration) && videoDuration > 0 ? videoDuration : 0;
+    }, [videoDuration, videoClips]);
 
     const pendingTrimRef = useRef<{ start: number; end: number } | null>(null);
 
@@ -76,7 +92,7 @@ export function Timeline({
     useEffect(() => {
         validDurationMotion.set(validDuration);
     }, [validDuration, validDurationMotion]);
-  
+
     const trimmedDurationLabel = useTransform(
         [trimStartX, trimEndX, contentWidthMotion, validDurationMotion] as const,
         ([start, end, cw, vd]: number[]) => {
@@ -167,7 +183,11 @@ export function Timeline({
 
     const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (contentWidth === 0 || validDuration === 0) return;
-        const newX = Math.max(trimStartPosition, Math.min(trimEndPosition, playheadX.get() + info.delta.x));
+
+        const maxX = videoClips.length > 0 ? contentWidth : trimEndPosition;
+        const minX = videoClips.length > 0 ? 0 : trimStartPosition;
+
+        const newX = Math.max(minX, Math.min(maxX, playheadX.get() + info.delta.x));
         playheadX.set(newX);
 
         const newTime = (newX / contentWidth) * validDuration;
@@ -185,7 +205,7 @@ export function Timeline({
                 isSeekingRef.current = false;
             });
         }
-    }, [contentWidth, validDuration, onSeek, playheadX, trimStartPosition, trimEndPosition]);
+    }, [contentWidth, validDuration, onSeek, playheadX, trimStartPosition, trimEndPosition, videoClips]);
 
     const handleDragStart = useCallback(() => {
         setIsDragging(true);
@@ -316,7 +336,10 @@ export function Timeline({
                                 className="absolute top-0 bottom-0 z-20 flex flex-col items-center cursor-ew-resize group select-none"
                                 style={{ x: playheadX, translateX: "-50%" }}
                                 drag="x"
-                                dragConstraints={{ left: trimStartPosition, right: trimEndPosition }}
+                                dragConstraints={{
+                                    left: videoClips.length > 0 ? 0 : trimStartPosition,
+                                    right: videoClips.length > 0 ? contentWidth : trimEndPosition
+                                }}
                                 dragElastic={0}
                                 dragMomentum={false}
                                 onDrag={handleDrag}
@@ -368,79 +391,105 @@ export function Timeline({
                                         className="h-full rounded-md flex items-center relative bg-[#0a1510] border border-white/5"
                                         style={{ width: contentWidth > 0 ? contentWidth : '100%' }}
                                     >
-                                        {trimRange.start > 0 && (
-                                            <motion.div
-                                                className="absolute left-0 top-0 bottom-0 bg-black/60 rounded-l-md z-10"
-                                                style={{ width: trimOverlayLeftWidth }}
-                                            />
-                                        )}
-                                        {trimRange.end < validDuration && (
-                                            <motion.div
-                                                className="absolute right-0 top-0 bottom-0 bg-black/60 rounded-r-md z-10"
-                                                style={{ left: trimOverlayRightLeft, width: trimOverlayRightWidth }}
-                                            />
-                                        )}
+                                        {/* Multi-video clips mode */}
+                                        {videoClips.length > 0 ? (
+                                            <>
+                                                {videoClips.map((clip) => (
+                                                    <VideoClipTrackItem
+                                                        key={clip.id}
+                                                        clip={clip}
+                                                        isSelected={selectedVideoClipId === clip.id}
+                                                        contentWidth={contentWidth}
+                                                        totalDuration={validDuration}
+                                                        otherClips={videoClips.filter(c => c.id !== clip.id)}
+                                                        currentTime={currentTime}
+                                                        playheadX={playheadX}
+                                                        onSelect={() => onSelectVideoClip?.(clip.id)}
+                                                        onUpdate={(updates) => onUpdateVideoClip?.(clip.id, updates)}
+                                                        onDelete={() => onDeleteVideoClip?.(clip.id)}
+                                                        onDragStateChange={setIsDraggingVideoClip}
+                                                        zoomLevel={zoomLevel}
+                                                    />
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* Legacy single video mode */}
+                                                {trimRange.start > 0 && (
+                                                    <motion.div
+                                                        className="absolute left-0 top-0 bottom-0 bg-black/60 rounded-l-md z-10"
+                                                        style={{ width: trimOverlayLeftWidth }}
+                                                    />
+                                                )}
+                                                {trimRange.end < validDuration && (
+                                                    <motion.div
+                                                        className="absolute right-0 top-0 bottom-0 bg-black/60 rounded-r-md z-10"
+                                                        style={{ left: trimOverlayRightLeft, width: trimOverlayRightWidth }}
+                                                    />
+                                                )}
 
-                                        {/* Active clip region */}
-                                        <motion.div
-                                            className="absolute top-0 bottom-0 rounded-md border border-[#34A853]/40 bg-[#182e20] overflow-hidden"
-                                            style={{ left: clipLeftMotion, width: clipWidthMotion }}
-                                        >
-                                            <div className="absolute inset-0 flex items-center overflow-hidden">
-                                                <div className="flex h-full w-full">
-                                                    {videoUrl && Array.from({ length: Math.max(1, Math.ceil(getZoomMultiplier(zoomLevel) * 3)) }).map((_, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="h-full flex-1 border-r border-[#34A853]/10 last:border-r-0"
-                                                            style={{
-                                                                background: 'linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(20, 80, 40, 0.1) 50%, rgba(52, 168, 83, 0.1) 100%)',
-                                                                boxShadow: 'inset 0px 1px 0px rgba(255, 255, 255, 0.05)'
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <motion.div
-                                                className="absolute top-0 bottom-0 -left-px border-r-2 border-[#4ade80]"
-                                                style={{
-                                                    width: progressWidth,
-                                                    background: `linear-gradient(to bottom, rgba(52, 168, 83, 0.9) 0%, rgba(34, 139, 34, 1) 50%, rgba(20, 80, 40, 1) 100%)`,
-                                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)'
-                                                }}
-                                            />
-                                            <motion.span className="flex items-center justify-center gap-2 text-emerald-400 text-[11px] font-medium ml-3 relative z-10 drop-shadow-sm h-full">
-                                                {trimmedDurationLabel}
-                                            </motion.span>
-                                        </motion.div>
-                                        {/* Trim Start Handle */}
-                                        <motion.div
-                                            className="absolute top-0 bottom-0 w-3 cursor-ew-resize z-20 group/trim flex items-center justify-center"
-                                            style={{ x: trimStartX, translateX: "-50%" }}
-                                            drag="x"
-                                            dragConstraints={{ left: 0, right: contentWidth }}
-                                            dragElastic={0}
-                                            dragMomentum={false}
-                                            onDrag={handleTrimStartDrag}
-                                            onDragStart={() => handleTrimDragStart('start')}
-                                            onDragEnd={handleTrimDragEnd}
-                                        >
-                                            <div className={`w-1.5 h-8 rounded-full transition-all ${isDraggingTrim === 'start' ? 'bg-[#4ade80] scale-110' : 'bg-[#34A853] group-hover/trim:bg-[#4ade80]'}`} />
-                                        </motion.div>
+                                                {/* Active clip region */}
+                                                <motion.div
+                                                    className="absolute top-0 bottom-0 rounded-md border border-[#34A853]/40 bg-[#182e20] overflow-hidden"
+                                                    style={{ left: clipLeftMotion, width: clipWidthMotion }}
+                                                >
+                                                    <div className="absolute inset-0 flex items-center overflow-hidden">
+                                                        <div className="flex h-full w-full">
+                                                            {videoUrl && Array.from({ length: Math.max(1, Math.ceil(getZoomMultiplier(zoomLevel) * 3)) }).map((_, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className="h-full flex-1 border-r border-[#34A853]/10 last:border-r-0"
+                                                                    style={{
+                                                                        background: 'linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(20, 80, 40, 0.1) 50%, rgba(52, 168, 83, 0.1) 100%)',
+                                                                        boxShadow: 'inset 0px 1px 0px rgba(255, 255, 255, 0.05)'
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <motion.div
+                                                        className="absolute top-0 bottom-0 -left-px border-r-2 border-[#4ade80]"
+                                                        style={{
+                                                            width: progressWidth,
+                                                            background: `linear-gradient(to bottom, rgba(52, 168, 83, 0.9) 0%, rgba(34, 139, 34, 1) 50%, rgba(20, 80, 40, 1) 100%)`,
+                                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)'
+                                                        }}
+                                                    />
+                                                    <motion.span className="flex items-center justify-center gap-2 text-emerald-400 text-[11px] font-medium ml-3 relative z-10 drop-shadow-sm h-full">
+                                                        {trimmedDurationLabel}
+                                                    </motion.span>
+                                                </motion.div>
+                                                {/* Trim Start Handle */}
+                                                <motion.div
+                                                    className="absolute top-0 bottom-0 w-3 cursor-ew-resize z-20 group/trim flex items-center justify-center"
+                                                    style={{ x: trimStartX, translateX: "-50%" }}
+                                                    drag="x"
+                                                    dragConstraints={{ left: 0, right: contentWidth }}
+                                                    dragElastic={0}
+                                                    dragMomentum={false}
+                                                    onDrag={handleTrimStartDrag}
+                                                    onDragStart={() => handleTrimDragStart('start')}
+                                                    onDragEnd={handleTrimDragEnd}
+                                                >
+                                                    <div className={`w-1.5 h-8 rounded-full transition-all ${isDraggingTrim === 'start' ? 'bg-[#4ade80] scale-110' : 'bg-[#34A853] group-hover/trim:bg-[#4ade80]'}`} />
+                                                </motion.div>
 
-                                        {/* Trim End Handle */}
-                                        <motion.div
-                                            className="absolute top-0 bottom-0 w-3 cursor-ew-resize z-20 group/trim flex items-center justify-center"
-                                            style={{ x: trimEndX, translateX: "-50%" }}
-                                            drag="x"
-                                            dragConstraints={{ left: 0, right: contentWidth }}
-                                            dragElastic={0}
-                                            dragMomentum={false}
-                                            onDrag={handleTrimEndDrag}
-                                            onDragStart={() => handleTrimDragStart('end')}
-                                            onDragEnd={handleTrimDragEnd}
-                                        >
-                                            <div className={`w-1.5 h-8 rounded-full transition-all ${isDraggingTrim === 'end' ? 'bg-[#4ade80] scale-110' : 'bg-[#34A853] group-hover/trim:bg-[#4ade80]'}`} />
-                                        </motion.div>
+                                                {/* Trim End Handle */}
+                                                <motion.div
+                                                    className="absolute top-0 bottom-0 w-3 cursor-ew-resize z-20 group/trim flex items-center justify-center"
+                                                    style={{ x: trimEndX, translateX: "-50%" }}
+                                                    drag="x"
+                                                    dragConstraints={{ left: 0, right: contentWidth }}
+                                                    dragElastic={0}
+                                                    dragMomentum={false}
+                                                    onDrag={handleTrimEndDrag}
+                                                    onDragStart={() => handleTrimDragStart('end')}
+                                                    onDragEnd={handleTrimDragEnd}
+                                                >
+                                                    <div className={`w-1.5 h-8 rounded-full transition-all ${isDraggingTrim === 'end' ? 'bg-[#4ade80] scale-110' : 'bg-[#34A853] group-hover/trim:bg-[#4ade80]'}`} />
+                                                </motion.div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 

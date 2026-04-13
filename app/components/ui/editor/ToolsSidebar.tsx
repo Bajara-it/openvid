@@ -13,6 +13,8 @@ interface ExtendedToolsSidebarProps extends ToolsSidebarProps {
     isCursorEnabled?: boolean;
     selectedZoomFragmentId?: string | null;
     selectedAudioTrackId?: string | null;
+    selectedVideoClipId?: string | null;
+    newVideosCount?: number;
 }
 
 export function ToolsSidebar({
@@ -23,13 +25,23 @@ export function ToolsSidebar({
     isCursorEnabled = false,
     selectedZoomFragmentId,
     selectedAudioTrackId,
+    selectedVideoClipId,
+    newVideosCount = 0,
 }: ExtendedToolsSidebarProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const zoomToolRef = useRef<HTMLButtonElement>(null);
     const audioToolRef = useRef<HTMLButtonElement>(null);
+    const videosToolRef = useRef<HTMLButtonElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const { startCountdown, isIdle, isRecording, isCountdown, isProcessing } = useRecording();
     const [showMobileAlert, setShowMobileAlert] = useState(false);
+
+    // Auto-scroll to videos menu when new videos are uploaded
+    useEffect(() => {
+        if (newVideosCount > 0 && videosToolRef.current && activeTool !== "videos") {
+            videosToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [newVideosCount, activeTool]);
 
     useEffect(() => {
         if (selectedZoomFragmentId && zoomToolRef.current) {
@@ -42,6 +54,12 @@ export function ToolsSidebar({
             audioToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }, [selectedAudioTrackId]);
+
+    useEffect(() => {
+        if (selectedVideoClipId && videosToolRef.current) {
+            videosToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [selectedVideoClipId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -128,7 +146,7 @@ export function ToolsSidebar({
         <div className="relative shrink-0 bg-[#141417]" style={{ width: '90px' }}>
             <div className="h-13 border-b border-white/10 w-full" />
             <aside
-                className="h-full absolute top-1/2 left-12 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-4 squircle-element border shadow-md shadow-white/20 border-white/10 z-40 max-h-150 3xl:max-h-[800px]"
+                className="h-full absolute top-1/2 left-12 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-4 squircle-element border shadow-md shadow-white/20 border-white/10 z-40 max-h-154 3xl:max-h-[800px]"
                 style={{
                     height: 'calc(100% - 2rem)',
                     minWidth: '70px',
@@ -150,6 +168,14 @@ export function ToolsSidebar({
                         label="Mockup"
                         isActive={activeTool === "mockup"}
                         onClick={() => onToolChange("mockup")}
+                    />
+                    <SidebarTool
+                        icon="solar:video-library-outline"
+                        label="Videos"
+                        isActive={activeTool === "videos"}
+                        onClick={() => onToolChange("videos")}
+                        ref={videosToolRef}
+                        badgeCount={activeTool !== "videos" ? newVideosCount : undefined}
                     />
                     <SidebarTool
                         label="Elementos"
@@ -201,7 +227,7 @@ export function ToolsSidebar({
                 </div>
 
                 <div
-                    className="w-full p-2 relative flex flex-col items-center gap-1 shrink-0 group"
+                    className="w-full p-2 relative flex flex-col items-center gap-1 shrink-0"
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -219,16 +245,16 @@ export function ToolsSidebar({
                             onClick={handleStartRecording}
                             disabled={!isIdle}
                             className={`w-full flex flex-col items-center text-center justify-center gap-1.5 p-2 rounded-xl cursor-pointer transition-all group border-2 border-transparent disabled:cursor-not-allowed
-                                ${!isIdle 
-                                    ? "opacity-70" 
+                                ${!isIdle
+                                    ? "opacity-70"
                                     : "hover:bg-red-500/10"
                                 }
                             `}
                         >
-                            <Icon 
-                                icon={recordButtonContent.icon} 
-                                width="24" 
-                                height="24" 
+                            <Icon
+                                icon={recordButtonContent.icon}
+                                width="24"
+                                height="24"
                                 className={`transition-colors ${recordButtonContent.className}`}
                             />
                             <span className={`text-xs font-medium transition-colors ${!isIdle ? recordButtonContent.className : "text-white/60 group-hover:text-red-400"}`}>

@@ -170,6 +170,21 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
 
     // On-canvas controls state
     const [isVideoHovered, setIsVideoHovered] = useState(false);
+
+    // Set initial video src when videoUrl changes (initial load only — transitions manage src imperatively)
+    const lastSetVideoUrlRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (videoRef.current && videoUrl && videoUrl !== lastSetVideoUrlRef.current) {
+            // Only set src if video element has no src or src is empty
+            if (!videoRef.current.src || videoRef.current.src === '' || videoRef.current.src === window.location.href) {
+                videoRef.current.src = videoUrl;
+                lastSetVideoUrlRef.current = videoUrl;
+            }
+        }
+        if (!videoUrl) {
+            lastSetVideoUrlRef.current = null;
+        }
+    }, [videoUrl, videoRef]);
     const [isDraggingVideo, setIsDraggingVideo] = useState(false);
     const [isDraggingRotation, setIsDraggingRotation] = useState(false);
     const [videoHoverCorner, setVideoHoverCorner] = useState<Corner>("top-right");
@@ -997,10 +1012,9 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                         >
                                             {videoUrl ? (
                                                 <div className="relative flex items-center justify-center overflow-hidden max-w-full max-h-full rounded-[inherit]"
-                                                >                                    {/* Video element */}
+                                                >                                    {/* Video element - src managed imperatively via videoRef, NOT as React prop */}
                                                     <video
                                                         ref={videoRef}
-                                                        src={videoUrl}
                                                         preload="auto"
                                                         playsInline
                                                         className="max-w-full max-h-full object-contain"
