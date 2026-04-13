@@ -12,9 +12,6 @@ export interface CachedThumbnailSet {
 
 let dbInstance: IDBDatabase | null = null;
 
-/**
- * Open IndexedDB connection
- */
 async function openDB(): Promise<IDBDatabase> {
     if (dbInstance) return dbInstance;
 
@@ -38,9 +35,6 @@ async function openDB(): Promise<IDBDatabase> {
     });
 }
 
-/**
- * Get cached thumbnails for a video by videoId
- */
 export async function getCachedThumbnails(
     videoId: string,
     quality: string,
@@ -64,7 +58,6 @@ export async function getCachedThumbnails(
                     if (Date.now() - result.createdAt < maxAge) {
                         resolve(result);
                     } else {
-                        // Cache expired, delete it
                         deleteCachedThumbnails(videoId, quality, interval);
                         resolve(null);
                     }
@@ -79,9 +72,6 @@ export async function getCachedThumbnails(
     }
 }
 
-/**
- * Save thumbnails to cache
- */
 export async function saveThumbnailsToCache(
     videoId: string,
     quality: string,
@@ -114,9 +104,6 @@ export async function saveThumbnailsToCache(
     }
 }
 
-/**
- * Delete cached thumbnails
- */
 export async function deleteCachedThumbnails(
     videoId: string,
     quality: string,
@@ -139,9 +126,6 @@ export async function deleteCachedThumbnails(
     }
 }
 
-/**
- * Clear all cached thumbnails (for cleanup)
- */
 export async function clearAllThumbnailCache(): Promise<void> {
     try {
         const db = await openDB();
@@ -158,9 +142,6 @@ export async function clearAllThumbnailCache(): Promise<void> {
     }
 }
 
-/**
- * Get cache size info
- */
 export async function getThumbnailCacheInfo(): Promise<{ count: number; estimatedSize: string }> {
     try {
         const db = await openDB();
@@ -173,7 +154,7 @@ export async function getThumbnailCacheInfo(): Promise<{ count: number; estimate
             request.onsuccess = () => {
                 resolve({
                     count: request.result,
-                    estimatedSize: "Unknown", // Would need to iterate to calculate
+                    estimatedSize: "Unknown",
                 });
             };
         });

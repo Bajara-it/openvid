@@ -1,5 +1,6 @@
 import { ZoomFragment } from "./zoom.types";
 import type { AudioTrack, UploadedAudio } from "./audio.types";
+import type { VideoTrackClip } from "./video-track.types";
 
 export interface TrimRange {
     start: number;
@@ -17,6 +18,12 @@ export interface TimelineProps {
     onDragEnd?: () => void;
     trimRange: TrimRange;
     onTrimChange: (range: TrimRange) => void;
+    // Video clips props (multi-video support)
+    videoClips?: VideoTrackClip[];
+    selectedVideoClipId?: string | null;
+    onSelectVideoClip?: (clipId: string | null) => void;
+    onUpdateVideoClip?: (clipId: string, updates: Partial<VideoTrackClip>) => void;
+    onDeleteVideoClip?: (clipId: string) => void;
     // Zoom props
     zoomFragments?: ZoomFragment[];
     selectedZoomFragmentId?: string | null;

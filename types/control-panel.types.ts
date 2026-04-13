@@ -60,10 +60,18 @@ export interface ControlPanelProps {
     onToggleMuteOriginalAudio?: () => void;
     onMasterVolumeChange?: (volume: number) => void;
     videoDuration?: number;
-    videoHasAudioTrack?: boolean;
     // Cursor props
     cursorConfig?: CursorConfig;
     cursorData?: CursorRecordingData;
     isRecordedVideo?: boolean;
     onCursorConfigChange?: (config: Partial<CursorConfig>) => void;
+    // Videos library props
+    onAddVideoToTrack?: (videoId: string, blob: Blob, duration: number) => void;
+    onRemoveVideoFromTrack?: (videoId: string) => void;
+    onVideoUploadToLibrary?: (file: File) => void;
+    onVideoDeleteFromTrack?: (videoId: string) => void;
+    videosInTrackIds?: string[];
+    videosLibraryRefresh?: number;
+    isVideoUploading?: boolean;
+    onVideoAudioToggle?: (videoId: string, hasAudio: boolean) => void;
 }
