@@ -549,7 +549,7 @@ export function useScreenRecording() {
   }, [restoreOriginals]);
 
   useEffect(() => {
-    if (recordingTime >= 60 && state === "recording") {
+    if (recordingTime >= 120 && state === "recording") {
       stopRecording();
     }
   }, [recordingTime, state, stopRecording]);
