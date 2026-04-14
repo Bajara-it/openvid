@@ -13,6 +13,7 @@ import { ElementsMenu } from "./ElementsMenu";
 import { TooltipAction } from "@/components/ui/tooltip-action";
 import CursorMenu from "./CursorMenu";
 import { DEFAULT_CURSOR_CONFIG } from "@/types/cursor.types";
+import { CameraMenu } from "./CameraMenu";
 
 // Lazy load heavy components - only load when needed
 const ImageRecentBackgroundGrid = lazy(() => import("../ImageRecentBackgroundGrid").then(mod => ({ default: mod.ImageRecentBackgroundGrid })));
@@ -101,7 +102,11 @@ export function ControlPanel({
     videosInTrackIds = [],
     videosLibraryRefresh,
     isVideoUploading = false,
-    onVideoAudioToggle
+    onVideoAudioToggle,
+    // Camera overlay props
+    cameraUrl = null,
+    cameraConfig = null,
+    onCameraConfigChange,
 }: ExtendedControlPanelProps) {
     return (
         <div className="relative w-full sm:w-[320px] h-screen bg-[#141417] border-r border-white/10 flex flex-col shrink-0">
@@ -338,6 +343,14 @@ export function ControlPanel({
                             isRecordedVideo={isRecordedVideo}
                         />
                     </Suspense>
+                )}
+
+                {activeTool === "camera" && (
+                    <CameraMenu
+                        cameraUrl={cameraUrl}
+                        cameraConfig={cameraConfig}
+                        onCameraConfigChange={onCameraConfigChange || (() => { })}
+                    />
                 )}
             </div>
         </div>
