@@ -6,10 +6,12 @@ import { Icon } from "@iconify/react";
 import StepRow from "./StepRow";
 import { useRecording } from "@/hooks/RecordingContext";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import RecordingSetupDialog from "./RecordingSetupDialog";
 
 export default function InteractiveRecordingSteps() {
   const { startCountdown, stopRecording, isIdle, isRecording, isCountdown, isProcessing } = useRecording();
   const [showMobileAlert, setShowMobileAlert] = useState(false);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
   const handleStartRecording = () => {
     const isMobile = typeof window !== "undefined" &&
@@ -19,7 +21,7 @@ export default function InteractiveRecordingSteps() {
       setShowMobileAlert(true);
       setTimeout(() => setShowMobileAlert(false), 5000);
     } else {
-      startCountdown();
+      setSetupDialogOpen(true);
     }
   };
 
@@ -339,6 +341,12 @@ export default function InteractiveRecordingSteps() {
           />
         ))}
       </div>
+
+      <RecordingSetupDialog
+        open={setupDialogOpen}
+        onClose={() => setSetupDialogOpen(false)}
+        onStart={(config) => startCountdown(config)}
+      />
     </div>
   );
 }

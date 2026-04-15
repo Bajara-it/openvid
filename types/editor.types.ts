@@ -2,7 +2,7 @@ import type { ZoomFragment } from "./zoom.types";
 import type { CanvasElement } from "./canvas-elements.types";
 import type { CursorConfig, CursorRecordingData } from "./cursor.types";
 
-export type Tool = "screenshot" | "elements" | "audio" | "zoom" | "mockup" | "cursor" | "videos";
+export type Tool = "screenshot" | "elements" | "audio" | "zoom" | "mockup" | "cursor" | "videos" | "camera";
 
 export type BackgroundTab = "wallpaper" | "image" | "color";
 
@@ -95,6 +95,10 @@ export interface VideoCanvasProps {
     // Cursor overlay props
     cursorConfig?: CursorConfig;
     cursorData?: CursorRecordingData;
+    // Camera overlay props
+    cameraUrl?: string | null;
+    cameraConfig?: import("./camera.types").CameraConfig | null;
+    onCameraConfigChange?: (partial: Partial<import("./camera.types").CameraConfig>) => void;
 }
 
 export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {

@@ -2,6 +2,7 @@ import type { BackgroundTab, AspectRatio, BackgroundColorConfig, CropArea, ZoomF
 import type { TrimRange } from "@/types/timeline.types";
 import type { MockupConfig } from "@/types/mockup.types";
 import type { CanvasElement } from "@/types/canvas-elements.types";
+import type { CameraConfig } from "@/types/camera.types";
 
 export interface EditorState {
     backgroundTab: BackgroundTab;
@@ -28,6 +29,8 @@ export interface EditorState {
     audioTracks: AudioTrack[];
     muteOriginalAudio: boolean;
     masterVolume: number;
+
+    cameraConfig: CameraConfig | null;
 }
 
 export function createInitialEditorState(overrides?: Partial<EditorState>): EditorState {
@@ -58,6 +61,7 @@ export function createInitialEditorState(overrides?: Partial<EditorState>): Edit
         audioTracks: [],
         muteOriginalAudio: false,
         masterVolume: 1,
+        cameraConfig: null,
         ...overrides,
     };
 }

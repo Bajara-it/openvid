@@ -6,6 +6,7 @@ import type { ToolsSidebarProps } from "@/types/tool-sidebar.types";
 import { useRef, useState, useEffect } from "react";
 import { TooltipAction } from "@/components/ui/tooltip-action";
 import { useRecording } from "@/hooks/RecordingContext";
+import RecordingSetupDialog from "../RecordingSetupDialog";
 
 interface ExtendedToolsSidebarProps extends ToolsSidebarProps {
     onVideoUpload?: (file: File) => void;
@@ -35,6 +36,7 @@ export function ToolsSidebar({
     const [isDragging, setIsDragging] = useState(false);
     const { startCountdown, isIdle, isRecording, isCountdown, isProcessing } = useRecording();
     const [showMobileAlert, setShowMobileAlert] = useState(false);
+    const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
     // Auto-scroll to videos menu when new videos are uploaded
     useEffect(() => {
@@ -107,7 +109,7 @@ export function ToolsSidebar({
             setShowMobileAlert(true);
             setTimeout(() => setShowMobileAlert(false), 5000);
         } else {
-            startCountdown();
+            setSetupDialogOpen(true);
         }
     };
 
@@ -222,6 +224,12 @@ export function ToolsSidebar({
                         badge={!isCursorEnabled ? "Pronto" : undefined}
                         disabled={!isCursorEnabled}
                     />
+                    <SidebarTool
+                        icon="solar:videocamera-record-bold-duotone"
+                        label="Cámara"
+                        isActive={activeTool === "camera"}
+                        onClick={() => onToolChange("camera")}
+                    />
 
                     <div className="shrink-0 h-12" aria-hidden="true" />
                 </div>
@@ -303,6 +311,12 @@ export function ToolsSidebar({
                     />
                 </div>
             </aside>
+
+            <RecordingSetupDialog
+                open={setupDialogOpen}
+                onClose={() => setSetupDialogOpen(false)}
+                onStart={(config) => startCountdown(config)}
+            />
         </div>
     );
 }

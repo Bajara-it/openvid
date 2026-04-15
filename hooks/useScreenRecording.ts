@@ -3,39 +3,15 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { RecordingState, RecordingResult, VideoData } from "@/types";
-// import type { CursorKeyframe, CursorRecordingData, CursorState } from "@/types/cursor.types";
-// import { EMPTY_CURSOR_DATA, supportsCursorCapture } from "@/types/cursor.types";
+import type { CameraConfig, RecordingSetupConfig } from "@/types/camera.types";
+import {
+  DEFAULT_RECORDING_SETUP,
+  requestCameraStream,
+  requestMicrophoneStream,
+} from "@/types/camera.types";
 import { clearAllThumbnailCache } from "@/lib/thumbnail-cache";
 
 export type { RecordingState, RecordingResult, VideoData };
-
-// Extend global types for CaptureController (2026 API)
-/* declare global {
-  interface CaptureController extends EventTarget {
-    oncapturedmousechange: ((event: CapturedMouseEvent) => void) | null;
-    setFocusBehavior(behavior: "focus-captured-surface" | "no-focus-change"): void;
-  }
-
-  interface CapturedMouseEvent extends Event {
-    surfaceX: number;
-    surfaceY: number;
-  }
-
-  var CaptureController: {
-    prototype: CaptureController;
-    new(): CaptureController;
-  } | undefined;
-}
-
-// Extended options for getDisplayMedia with CaptureController support
-interface ExtendedDisplayMediaOptions {
-  controller?: CaptureController;
-  video?: boolean | MediaTrackConstraints & {
-    cursor?: "always" | "motion" | "never";
-    displaySurface?: "browser" | "window" | "monitor";
-  };
-  audio?: boolean | MediaTrackConstraints;
-}*/
 
 function generateVideoId(): string {
   return `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -80,7 +56,10 @@ async function getDB(): Promise<IDBDatabase> {
 async function saveVideoToIndexedDB(
   blob: Blob,
   duration: number,
-  // cursorData?: CursorRecordingData
+  extras: {
+    cameraBlob?: Blob | null;
+    cameraConfig?: CameraConfig | null;
+  } = {}
 ): Promise<string> {
   try {
     await clearAllThumbnailCache();
@@ -101,8 +80,9 @@ async function saveVideoToIndexedDB(
       duration,
       videoId,
       timestamp: Date.now(),
-      // cursorData: cursorData || EMPTY_CURSOR_DATA,
-      isRecordedVideo: true, // Flag to identify browser-recorded videos
+      isRecordedVideo: true,
+      cameraBlob: extras.cameraBlob ?? null,
+      cameraConfig: extras.cameraConfig ?? null,
     };
 
     const putRequest = store.put(videoData, "currentVideo");
@@ -125,8 +105,10 @@ export async function loadVideoFromIndexedDB(): Promise<{
   url: string;
   videoId: string;
   timestamp: number;
-  // cursorData?: CursorRecordingData;
   isRecordedVideo?: boolean;
+  cameraBlob?: Blob | null;
+  cameraUrl?: string | null;
+  cameraConfig?: CameraConfig | null;
 } | null> {
   try {
     const db = await getDB();
@@ -150,14 +132,18 @@ export async function loadVideoFromIndexedDB(): Promise<{
           const url = URL.createObjectURL(data.blob);
           const videoId = data.videoId || `vid_${data.timestamp || Date.now()}`;
           const timestamp = data.timestamp || Date.now();
+          const cameraBlob: Blob | null = data.cameraBlob ?? null;
+          const cameraUrl = cameraBlob ? URL.createObjectURL(cameraBlob) : null;
           resolve({
             blob: data.blob,
             duration: data.duration,
             url,
             videoId,
             timestamp,
-            // cursorData: data.cursorData || EMPTY_CURSOR_DATA,
             isRecordedVideo: data.isRecordedVideo || false,
+            cameraBlob,
+            cameraUrl,
+            cameraConfig: data.cameraConfig ?? null,
           });
         } else {
           resolve(null);
@@ -211,32 +197,51 @@ const titles = {
   processing: "⏳ Procesando video...",
 };
 
+function pickSupportedMimeType(preferred: string[]): string | undefined {
+  for (const mimeType of preferred) {
+    try {
+      if (MediaRecorder.isTypeSupported(mimeType)) return mimeType;
+    } catch {
+      // continue
+    }
+  }
+  return undefined;
+}
+
 export function useScreenRecording() {
   const [state, setState] = useState<RecordingState>("idle");
   const [countdown, setCountdown] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState<number>(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraConfig, setCameraConfig] = useState<CameraConfig | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+
+  const screenRecorderRef = useRef<MediaRecorder | null>(null);
+  const cameraRecorderRef = useRef<MediaRecorder | null>(null);
+  const screenChunksRef = useRef<Blob[]>([]);
+  const cameraChunksRef = useRef<Blob[]>([]);
+
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   const startTimeRef = useRef<number>(0);
   const originalTitleRef = useRef<string>("");
   const stateRef = useRef<RecordingState>("idle");
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Cursor capture refs
-  // const cursorKeyframesRef = useRef<CursorKeyframe[]>([]);
-  // const captureControllerRef = useRef<CaptureController | null>(null);
-  const videoDimensionsRef = useRef<{ width: number; height: number }>({ width: 1920, height: 1080 });
-  // const isClickingRef = useRef<boolean>(false);
-  // const lastCursorStateRef = useRef<CursorState>("default");
+  const cameraConfigRef = useRef<CameraConfig | null>(null);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    cameraConfigRef.current = cameraConfig;
+  }, [cameraConfig]);
 
   const setTitle = useCallback((title: string) => {
     if (typeof document === "undefined") return;
@@ -259,7 +264,7 @@ export function useScreenRecording() {
     } else if (state === "countdown") {
       setTitle(titles.countdown(countdown));
     } else if (state === "recording") {
-      const timeStr = recordingTime.toString().padStart(2, '0');
+      const timeStr = recordingTime.toString().padStart(2, "0");
       setTitle(`Grabando ${timeStr}s`);
     } else if (state === "processing") {
       setTitle(titles.processing);
@@ -267,286 +272,334 @@ export function useScreenRecording() {
   }, [state, countdown, recordingTime, setTitle, restoreOriginals]);
 
   useEffect(() => {
-    if (state === "recording") {
-      setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-      if (state === "idle") {
-        setRecordingTime(0);
-      }
-    }
-
+    if (state !== "recording") return;
+    const interval = setInterval(() => {
+      setRecordingTime((prev) => prev + 1);
+    }, 1000);
+    recordingTimerRef.current = interval;
     return () => {
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-      }
+      clearInterval(interval);
+      recordingTimerRef.current = null;
     };
   }, [state]);
 
+  const cleanupStreams = useCallback(() => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+    }
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      audioCtxRef.current.close().catch(() => undefined);
+      audioCtxRef.current = null;
+    }
+    setCameraStream(null);
+  }, []);
+
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    if (
+      screenRecorderRef.current &&
+      screenRecorderRef.current.state !== "inactive"
+    ) {
+      screenRecorderRef.current.stop();
+    }
+    if (
+      cameraRecorderRef.current &&
+      cameraRecorderRef.current.state !== "inactive"
+    ) {
+      cameraRecorderRef.current.stop();
     }
   }, []);
 
-  const startRecording = useCallback((stream: MediaStream) => {
-    try {
-      chunksRef.current = [];
-      // cursorKeyframesRef.current = []; // Reset cursor keyframes
-      startTimeRef.current = Date.now();
+  const updateCameraConfig = useCallback((partial: Partial<CameraConfig>) => {
+    setCameraConfig((prev) => (prev ? { ...prev, ...partial } : prev));
+  }, []);
 
-      // Get video dimensions from the stream
-      const videoTrack = stream.getVideoTracks()[0];
-      const settings = videoTrack.getSettings();
-      videoDimensionsRef.current = {
-        width: settings.width || 1920,
-        height: settings.height || 1080,
-      };
-
-      const codecOptions = [
-        { mimeType: "video/webm;codecs=vp9,opus" },
-        { mimeType: "video/webm;codecs=vp8,opus" },
-        { mimeType: "video/webm;codecs=vp9" },
-        { mimeType: "video/webm;codecs=vp8" },
-        { mimeType: "video/webm" },
-      ];
-
-      let mediaRecorder: MediaRecorder | null = null;
-
-      for (const options of codecOptions) {
-        try {
-          if (MediaRecorder.isTypeSupported(options.mimeType)) {
-            mediaRecorder = new MediaRecorder(stream, options);
-            break;
-          }
-        } catch (e) {
-          console.warn(`Failed to create MediaRecorder with ${options.mimeType}:`, e);
-        }
-      }
-
-      if (!mediaRecorder) {
-        try {
-          mediaRecorder = new MediaRecorder(stream);
-          console.log("Using default MediaRecorder settings");
-        } catch {
-          throw new Error("No se pudo crear MediaRecorder con ninguna configuración");
-        }
-      }
-
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onerror = (event) => {
-        console.error("MediaRecorder error:", event);
-        setError("Error durante la grabación");
-        setState("idle");
-        restoreOriginals();
-      };
-
-      mediaRecorder.onstop = async () => {
-        setState("processing");
-
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-
-        // Clean up capture controller
-        /* if (captureControllerRef.current) {
-           captureControllerRef.current.oncapturedmousechange = null;
-           captureControllerRef.current = null;
-         }*/
-
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        const duration = (Date.now() - startTimeRef.current) / 1000;
-
-        // Build cursor recording data
-        /* const cursorData: CursorRecordingData = {
-          keyframes: cursorKeyframesRef.current,
-          videoDimensions: videoDimensionsRef.current,
-          frameRate: 60,
-          hasCursorData: cursorKeyframesRef.current.length > 0,
-        };*/
-
-        try {
-          await saveVideoToIndexedDB(blob, duration, /* cursorData */);
-          
-          if (pathname === "/editor") {
-            window.location.reload();
-          } else {
-            router.push("/editor");
-          }
-        } catch (error) {
-          console.error("Error al guardar video:", error);
-          setError("Error al procesar el video");
-          setState("idle");
-          restoreOriginals();
-        }
-      };
-
+  const startRecording = useCallback(
+    (screenStream: MediaStream, camStream: MediaStream | null) => {
       try {
-        mediaRecorder.start(1000);
-        setState("recording");
-      } catch (e) {
-        console.error("Error starting MediaRecorder:", e);
-        throw new Error("No se pudo iniciar la grabación");
-      }
+        screenChunksRef.current = [];
+        cameraChunksRef.current = [];
+        startTimeRef.current = Date.now();
 
-    } catch (err) {
-      console.error("Error al iniciar grabación:", err);
-      setError(err instanceof Error ? err.message : "No se pudo iniciar la grabación");
-      setState("idle");
-      restoreOriginals();
-    }
-  }, [router, pathname, restoreOriginals]);
+        const screenMime =
+          pickSupportedMimeType([
+            "video/webm;codecs=vp9,opus",
+            "video/webm;codecs=vp8,opus",
+            "video/webm;codecs=vp9",
+            "video/webm;codecs=vp8",
+            "video/webm",
+          ]) || undefined;
 
-  const startCountdown = useCallback(async () => {
-    try {
-      setError(null);
+        const screenRecorder = new MediaRecorder(
+          screenStream,
+          screenMime ? { mimeType: screenMime } : undefined
+        );
+        screenRecorderRef.current = screenRecorder;
 
-      // Check if CaptureController is supported (2026 API for cursor tracking)
-      // const hasCaptureController = supportsCursorCapture();
-      // let controller: CaptureController | null = null;
+        screenRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            screenChunksRef.current.push(event.data);
+          }
+        };
+        screenRecorder.onerror = (event) => {
+          console.error("Error del MediaRecorder (pantalla):", event);
+          setError("Error durante la grabación");
+          setState("idle");
+          cleanupStreams();
+          restoreOriginals();
+        };
 
-      /* if (hasCaptureController && typeof CaptureController !== "undefined") {
-        try {
-          controller = new CaptureController();
-          captureControllerRef.current = controller;
+        let cameraRecorder: MediaRecorder | null = null;
+        if (camStream) {
+          const camMime =
+            pickSupportedMimeType([
+              "video/webm;codecs=vp9",
+              "video/webm;codecs=vp8",
+              "video/webm",
+            ]) || undefined;
 
-          // Listen for cursor position changes
-          controller.oncapturedmousechange = (event: CapturedMouseEvent) => {
-            console.log(`[RAW EVENT] X: ${event.surfaceX}, Y: ${event.surfaceY} | Estado actual: ${stateRef.current}`);
-            if (stateRef.current !== "recording") return;
-            console.log(`Cursor detectado en X: ${event.surfaceX}, Y: ${event.surfaceY}`);
+          cameraRecorder = new MediaRecorder(
+            camStream,
+            camMime ? { mimeType: camMime } : undefined
+          );
+          cameraRecorderRef.current = cameraRecorder;
 
-            const time = (Date.now() - startTimeRef.current) / 1000;
-            const { width, height } = videoDimensionsRef.current;
-
-            // Convert pixel coordinates to percentages
-            const x = (event.surfaceX / width) * 100;
-            const y = (event.surfaceY / height) * 100;
-
-            // Only add keyframe if position changed significantly (optimization)
-            const lastKeyframe = cursorKeyframesRef.current[cursorKeyframesRef.current.length - 1];
-            if (!lastKeyframe ||
-              Math.abs(lastKeyframe.x - x) > 0.1 ||
-              Math.abs(lastKeyframe.y - y) > 0.1 ||
-              lastKeyframe.clicking !== isClickingRef.current) {
-
-              cursorKeyframesRef.current.push({
-                time,
-                x,
-                y,
-                state: lastCursorStateRef.current,
-                clicking: isClickingRef.current,
-              });
+          cameraRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              cameraChunksRef.current.push(event.data);
             }
           };
-
-          console.log("CaptureController initialized for cursor tracking");
-        } catch (e) {
-          console.warn("Failed to initialize CaptureController:", e);
-          controller = null;
-          captureControllerRef.current = null;
+          cameraRecorder.onerror = (event) => {
+            console.error("Error del MediaRecorder (cámara):", event);
+            // Camera failure should not crash the whole recording.
+          };
         }
-      }*/
 
-      // Build display media options
-      const displayMediaOptions: DisplayMediaStreamOptions /*ExtendedDisplayMediaOptions*/ = {
-        video: {
-          displaySurface: "browser",
-          // Hide native cursor when CaptureController is available
-          // so we can draw our custom cursor instead
-          /* ...(controller ? { cursor: "never" as const } : {}),*/
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-        // Attach controller if available
-        /*...(controller ? { controller } : {}),*/
-      };
+        let pendingCount = cameraRecorder ? 2 : 1;
+        let screenBlob: Blob | null = null;
+        let cameraBlob: Blob | null = null;
 
-      const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions as DisplayMediaStreamOptions);
+        const finalize = async () => {
+          setState("processing");
+          const duration = (Date.now() - startTimeRef.current) / 1000;
+          cleanupStreams();
 
-      streamRef.current = stream;
+          try {
+            await saveVideoToIndexedDB(
+              screenBlob || new Blob([], { type: "video/webm" }),
+              duration,
+              {
+                cameraBlob,
+                cameraConfig: cameraConfigRef.current,
+              }
+            );
 
-      // Set up click tracking for the captured surface
-      /* if (controller) {
-        // Track mouse clicks globally during recording
-        const handleMouseDown = () => { isClickingRef.current = true; };
-        const handleMouseUp = () => { isClickingRef.current = false; };
+            if (pathname === "/editor") {
+              window.location.reload();
+            } else {
+              router.push("/editor");
+            }
+          } catch (err) {
+            console.error("Error al guardar video:", err);
+            setError("Error al procesar el video");
+            setState("idle");
+            restoreOriginals();
+          }
+        };
 
-        document.addEventListener("mousedown", handleMouseDown);
-        document.addEventListener("mouseup", handleMouseUp);
+        screenRecorder.onstop = () => {
+          screenBlob = new Blob(screenChunksRef.current, { type: "video/webm" });
+          pendingCount -= 1;
+          if (pendingCount <= 0) finalize();
+          else if (cameraRecorder && cameraRecorder.state !== "inactive") {
+            cameraRecorder.stop();
+          }
+        };
 
-        // Clean up click listeners when stream ends
-        stream.getVideoTracks()[0].addEventListener("ended", () => {
-          document.removeEventListener("mousedown", handleMouseDown);
-          document.removeEventListener("mouseup", handleMouseUp);
+        if (cameraRecorder) {
+          cameraRecorder.onstop = () => {
+            cameraBlob = new Blob(cameraChunksRef.current, {
+              type: "video/webm",
+            });
+            pendingCount -= 1;
+            if (pendingCount <= 0) finalize();
+            else if (
+              screenRecorderRef.current &&
+              screenRecorderRef.current.state !== "inactive"
+            ) {
+              screenRecorderRef.current.stop();
+            }
+          };
+        }
+
+        screenRecorder.start(1000);
+        cameraRecorder?.start(1000);
+        setState("recording");
+      } catch (err) {
+        console.error("Error al iniciar grabación:", err);
+        setError(
+          err instanceof Error ? err.message : "No se pudo iniciar la grabación"
+        );
+        setState("idle");
+        cleanupStreams();
+        restoreOriginals();
+      }
+    },
+    [router, pathname, restoreOriginals, cleanupStreams]
+  );
+
+  const startCountdown = useCallback(
+    async (setupArg?: RecordingSetupConfig) => {
+      const setup: RecordingSetupConfig = setupArg ?? DEFAULT_RECORDING_SETUP;
+
+      try {
+        setError(null);
+        setRecordingTime(0);
+
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: "browser" },
+          audio: setup.systemAudio
+            ? { echoCancellation: true, noiseSuppression: true }
+            : false,
         });
-      }*/
+        screenStreamRef.current = screenStream;
 
-      stream.getVideoTracks()[0].onended = () => {
-        if (stateRef.current === "recording") {
-          stopRecording();
-        } else {
-          setState("idle");
-          restoreOriginals();
+        let camStream: MediaStream | null = null;
+        if (setup.camera.enabled) {
+          try {
+            camStream = await requestCameraStream(setup.camera.deviceId);
+            cameraStreamRef.current = camStream;
+            setCameraStream(camStream);
+            setCameraConfig(setup.camera);
+          } catch (err) {
+            console.warn("Cámara denegada, continuando sin cámara:", err);
+          }
         }
-      };
 
-      setState("countdown");
-      setCountdown(4);
-
-      let count = 4;
-      const countdownInterval = setInterval(() => {
-        count--;
-        setCountdown(count);
-
-        if (count <= 0) {
-          clearInterval(countdownInterval);
-          startRecording(stream);
+        let micStream: MediaStream | null = null;
+        if (setup.microphone.enabled) {
+          try {
+            micStream = await requestMicrophoneStream(
+              setup.microphone.deviceId,
+              {
+                noiseSuppression: setup.microphone.noiseSuppression,
+                echoCancellation: setup.microphone.echoCancellation,
+              }
+            );
+            micStreamRef.current = micStream;
+          } catch (err) {
+            console.warn("Micrófono denegado, continuando sin micrófono:", err);
+          }
         }
-      }, 1000);
 
-    } catch (err) {
-      console.error("Error al iniciar captura:", err);
-      setError("No se pudo iniciar la captura de pantalla");
-      setState("idle");
-      restoreOriginals();
-    }
-  }, [restoreOriginals, stopRecording, startRecording]);
+        const screenAudioTracks = screenStream.getAudioTracks();
+        const micAudioTracks = micStream ? micStream.getAudioTracks() : [];
+        const needsMixing = micAudioTracks.length > 0;
+
+        let finalScreenStream: MediaStream = screenStream;
+        if (needsMixing) {
+          try {
+            const AudioCtx =
+              window.AudioContext ||
+              (window as unknown as { webkitAudioContext: typeof AudioContext })
+                .webkitAudioContext;
+            const audioCtx = new AudioCtx();
+            audioCtxRef.current = audioCtx;
+
+            const destination = audioCtx.createMediaStreamDestination();
+
+            if (screenAudioTracks.length > 0) {
+              const screenSource = audioCtx.createMediaStreamSource(
+                new MediaStream(screenAudioTracks)
+              );
+              screenSource.connect(destination);
+            }
+
+            if (micAudioTracks.length > 0) {
+              const micSource = audioCtx.createMediaStreamSource(
+                new MediaStream(micAudioTracks)
+              );
+              const micGain = audioCtx.createGain();
+              micGain.gain.value = setup.microphone.volume;
+              micSource.connect(micGain);
+              micGain.connect(destination);
+            }
+
+            finalScreenStream = new MediaStream([
+              ...screenStream.getVideoTracks(),
+              ...destination.stream.getAudioTracks(),
+            ]);
+          } catch (err) {
+            console.warn(
+              "Error al mezclar audio, usando solo audio de pantalla:",
+              err
+            );
+            finalScreenStream = screenStream;
+          }
+        }
+
+        screenStream.getVideoTracks()[0].onended = () => {
+          if (stateRef.current === "recording") {
+            stopRecording();
+          } else {
+            setState("idle");
+            cleanupStreams();
+            restoreOriginals();
+          }
+        };
+
+        setState("countdown");
+        setCountdown(4);
+
+        let count = 4;
+        const countdownInterval = setInterval(() => {
+          count -= 1;
+          setCountdown(count);
+          if (count <= 0) {
+            clearInterval(countdownInterval);
+            startRecording(finalScreenStream, camStream);
+          }
+        }, 1000);
+      } catch (err) {
+        console.error("Error al iniciar captura:", err);
+        setError("No se pudo iniciar la captura de pantalla");
+        setState("idle");
+        cleanupStreams();
+        restoreOriginals();
+      }
+    },
+    [restoreOriginals, stopRecording, startRecording, cleanupStreams]
+  );
 
   const cancelRecording = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+    if (
+      screenRecorderRef.current &&
+      screenRecorderRef.current.state !== "inactive"
+    ) {
+      screenRecorderRef.current.stop();
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    if (
+      cameraRecorderRef.current &&
+      cameraRecorderRef.current.state !== "inactive"
+    ) {
+      cameraRecorderRef.current.stop();
     }
-    // Clean up capture controller
-    /* if (captureControllerRef.current) {
-      captureControllerRef.current.oncapturedmousechange = null;
-      captureControllerRef.current = null;
-    }*/
-    chunksRef.current = [];
-    // cursorKeyframesRef.current = [];
+    cleanupStreams();
+    screenChunksRef.current = [];
+    cameraChunksRef.current = [];
+    setRecordingTime(0);
     setState("idle");
+    setCameraConfig(null);
     restoreOriginals();
-  }, [restoreOriginals]);
+  }, [cleanupStreams, restoreOriginals]);
 
   useEffect(() => {
     if (recordingTime >= 120 && state === "recording") {
@@ -566,5 +619,8 @@ export function useScreenRecording() {
     isCountdown: state === "countdown",
     isRecording: state === "recording",
     isProcessing: state === "processing",
+    cameraStream,
+    cameraConfig,
+    updateCameraConfig,
   };
 }

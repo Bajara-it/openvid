@@ -1,4 +1,4 @@
-type Tool = "screenshot" | "elements" | "audio" | "zoom" | "mockup" | "cursor" | "videos";
+import type { Tool } from "./editor.types";
 
 export interface ToolsSidebarProps {
     activeTool: Tool;

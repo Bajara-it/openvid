@@ -1,11 +1,29 @@
 "use client";
 
 import { useRecording } from "@/hooks/RecordingContext";
+import FloatingCameraPreview from "./FloatingCameraPreview";
 
 export default function RecordingOverlay() {
-    const { state, countdown, recordingTime, stopRecording, isCountdown, isRecording, isProcessing } = useRecording();
+    const {
+        state,
+        countdown,
+        recordingTime,
+        stopRecording,
+        isCountdown,
+        isRecording,
+        isProcessing,
+        cameraStream,
+        cameraConfig,
+        updateCameraConfig,
+    } = useRecording();
 
     if (state === "idle") return null;
+
+    // Only show the floating camera during countdown. During recording, the preview
+    // would be captured by the screen share on monitor/tab captures, producing a
+    // duplicate camera in the final video. The camera is still recorded as a
+    // separate track via getUserMedia and composited in the editor.
+    const showFloatingCamera = isCountdown && cameraStream && cameraConfig?.enabled;
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -15,6 +33,13 @@ export default function RecordingOverlay() {
 
     return (
         <div className="fixed inset-0 z-9999 pointer-events-none">
+            {showFloatingCamera && cameraStream && cameraConfig && (
+                <FloatingCameraPreview
+                    stream={cameraStream}
+                    config={cameraConfig}
+                    onConfigChange={updateCameraConfig}
+                />
+            )}
             {isCountdown && (
                 <div className="absolute inset-0 bg-[#000B13]/95 backdrop-blur-md flex items-center justify-center z-50 pointer-events-auto">
                     <div className="flex flex-col items-center scale-110">

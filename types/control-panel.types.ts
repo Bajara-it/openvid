@@ -5,6 +5,7 @@ import { MockupConfig } from "./mockup.types";
 import type { CanvasElement } from "./canvas-elements.types";
 import type { UploadedAudio, AudioTrack } from "./audio.types";
 import type { CursorConfig, CursorRecordingData } from "./cursor.types";
+import type { CameraConfig } from "./camera.types";
 
 export interface ControlPanelProps {
     activeTool: Tool;
@@ -74,4 +75,8 @@ export interface ControlPanelProps {
     videosLibraryRefresh?: number;
     isVideoUploading?: boolean;
     onVideoAudioToggle?: (videoId: string, hasAudio: boolean) => void;
+    // Camera overlay props
+    cameraUrl?: string | null;
+    cameraConfig?: CameraConfig | null;
+    onCameraConfigChange?: (partial: Partial<CameraConfig>) => void;
 }
