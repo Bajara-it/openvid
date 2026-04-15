@@ -10,21 +10,18 @@ const RecordingContext = createContext<RecordingContextType | null>(null);
 
 export function RecordingProvider({ children }: { children: ReactNode }) {
   const recording = useScreenRecording();
-  
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Iniciar grabación: Alt + S
       if (e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
         if (recording.isIdle) {
           recording.startCountdown();
         }
       }
-      
-      // Detener grabación: Alt + D
+
       if (e.altKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
-        // Solo detener si actualmente está grabando
         if (recording.isRecording) {
           recording.stopRecording();
         }
@@ -34,7 +31,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [recording.isIdle, recording.isRecording, recording.startCountdown, recording.stopRecording]);
-  
+
   return (
     <RecordingContext.Provider value={recording}>
       {children}

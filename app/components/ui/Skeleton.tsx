@@ -401,18 +401,15 @@ export function TimelineSkeleton() {
     );
 }
 
-
 export function AudioMenuSkeleton() {
     return (
         <div className="p-4 flex flex-col gap-5">
 
-            {/* Header "Audio" */}
             <div className="flex items-center gap-2">
                 <Skeleton width={20} height={20} variant="circle" />
                 <Skeleton height={14} width={50} />
             </div>
 
-            {/* Audio original toggle */}
             <div className="bg-[#09090B] border border-white/5 squircle-element p-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -423,7 +420,6 @@ export function AudioMenuSkeleton() {
                 </div>
             </div>
 
-            {/* Volumen maestro slider */}
             <div className="flex items-center gap-3">
                 <Skeleton width={16} height={16} variant="circle" />
                 <Skeleton height={10} width={100} />
@@ -431,13 +427,11 @@ export function AudioMenuSkeleton() {
                 <Skeleton height={10} width={24} />
             </div>
 
-            {/* Botón subir audio */}
             <div className="flex flex-col items-center gap-2">
                 <Skeleton height={32} variant="square" className="w-full" />
                 <Skeleton height={10} width={160} />
             </div>
 
-            {/* Pistas skeleton (2 tracks como placeholder) */}
             <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                     <Skeleton width={14} height={14} variant="circle" />
@@ -464,4 +458,55 @@ export function AudioMenuSkeleton() {
 
         </div>
     );
+}
+
+export function VideosMenuSkeleton() {
+  return (
+    <div className="p-4 flex flex-col gap-5 h-full relative">
+      
+      <div className="flex items-center gap-2">
+        <Skeleton width={20} height={20} variant="circle" />
+        <Skeleton height={16} width={50} />
+      </div>
+
+      <div className="flex-1 overflow-y-hidden flex flex-col gap-2 -mx-1 px-1">
+        
+        <div className="mb-4">
+          <Skeleton height={32} variant="square" className="w-full rounded-md" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-[#09090B] border border-white/5 squircle-element overflow-hidden p-2.5 flex items-center gap-3"
+            >
+              <div className="shrink-0">
+                <Skeleton width={80} height={48} variant="square" className="rounded-md" />
+              </div>
+
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                <Skeleton height={12} width="85%" />
+                <div className="flex items-center gap-2">
+                  <Skeleton height={10} width="35%" />
+                  <Skeleton height={10} width={8} />
+                  <Skeleton height={10} width="30%" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <Skeleton width={28} height={28} variant="square" className="rounded-md" />
+                <Skeleton width={28} height={28} variant="square" className="rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-white/5 shrink-0 flex justify-center">
+        <Skeleton height={10} width="70%" />
+      </div>
+      
+    </div>
+  );
 }

@@ -171,6 +171,10 @@ export default function Editor() {
         setCameraConfig((prev) => (prev ? { ...prev, ...partial } : prev));
     }, []);
 
+    const handleCameraClick = useCallback(() => {
+        setActiveTool("camera");
+    }, []);
+
     // Videos library state
     const [newVideosCount, setNewVideosCount] = useState<number>(0);
     const [videosLibraryRefresh, setVideosLibraryRefresh] = useState<number>(0);
@@ -1184,6 +1188,7 @@ export default function Editor() {
                                     trimStart: 0,
                                     trimEnd: libraryVideo.duration,
                                     thumbnailUrl: libraryVideo.thumbnailUrl,
+                                    hasCamera: 'cameraUrl' in videoToLoad && !!videoToLoad.cameraUrl,
                                 };
 
                                 activeClipIdRef.current = newClip.id;
@@ -2001,6 +2006,11 @@ export default function Editor() {
         setCropArea(crop);
     }, []);
 
+    // Only show camera if the active clip has camera support
+    const activeClip = findActiveClipAtTime(currentTime);
+    const shouldShowCamera = activeClip?.hasCamera === true;
+    const effectiveCameraUrl = shouldShowCamera ? cameraUrl : null;
+
     return (
         <div className="flex flex-col h-screen w-full bg-[#0E0E12] text-white/60 font-sans overflow-hidden select-none">
             <div className="flex flex-1 overflow-hidden">
@@ -2174,9 +2184,10 @@ export default function Editor() {
                         selectedElementId={selectedElementId}
                         onElementUpdate={updateCanvasElement}
                         onElementSelect={selectCanvasElement}
-                        cameraUrl={cameraUrl}
+                        cameraUrl={effectiveCameraUrl}
                         cameraConfig={cameraConfig}
                         onCameraConfigChange={handleCameraConfigChange}
+                        onCameraClick={handleCameraClick}
                         onEnded={() => {
                             const clips = videoClipsRef.current;
                             if (clips.length > 1) {

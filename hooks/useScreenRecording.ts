@@ -440,9 +440,15 @@ export function useScreenRecording() {
           };
         }
 
-        screenRecorder.start(1000);
-        cameraRecorder?.start(1000);
         setState("recording");
+
+        // Retrasar el inicio de la grabadora para que no aparesca el overlay de la cuenta regresiva
+
+        setTimeout(() => {
+          startTimeRef.current = Date.now();
+          screenRecorder.start(1000);
+          cameraRecorder?.start(1000);
+        }, 300);
       } catch (err) {
         console.error("Error al iniciar grabación:", err);
         setError(

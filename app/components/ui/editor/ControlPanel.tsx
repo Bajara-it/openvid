@@ -8,7 +8,7 @@ import type { ControlPanelProps } from "@/types/control-panel.types";
 import Link from "next/link";
 import Image from "next/image";
 import { lazy, Suspense } from "react";
-import { ElementsMenuSkeleton, ZoomGlobalConfigSkeleton, MockupMenuSkeleton, WallpaperSkeleton, BackgroundColorSkeleton, ImageBackgroundSkeleton, ZoomFragmentEditorSkeleton, AudioMenuSkeleton } from "../Skeleton";
+import { ElementsMenuSkeleton, ZoomGlobalConfigSkeleton, MockupMenuSkeleton, WallpaperSkeleton, BackgroundColorSkeleton, ImageBackgroundSkeleton, ZoomFragmentEditorSkeleton, AudioMenuSkeleton, VideosMenuSkeleton } from "../Skeleton";
 import { ElementsMenu } from "./ElementsMenu";
 import { TooltipAction } from "@/components/ui/tooltip-action";
 import CursorMenu from "./CursorMenu";
@@ -262,7 +262,7 @@ export function ControlPanel({
                 )}
 
                 {activeTool === "videos" && (
-                    <Suspense fallback={<MockupMenuSkeleton />}>
+                    <Suspense fallback={<VideosMenuSkeleton />}>
                         <VideosMenu
                             onAddToTrack={onAddVideoToTrack}
                             onRemoveFromTrack={onRemoveVideoFromTrack}
