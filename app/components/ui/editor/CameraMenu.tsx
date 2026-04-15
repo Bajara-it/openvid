@@ -8,6 +8,8 @@ import {
     type CameraCorner,
     type CameraShape,
 } from "@/types/camera.types";
+import { SliderControl } from "../SliderControl";
+import { Toggle } from "@/components/ui/toggle";
 
 interface Props {
     cameraUrl: string | null;
@@ -44,22 +46,6 @@ export function CameraMenu({ cameraUrl, cameraConfig, onCameraConfigChange }: Pr
                 <span>Cámara</span>
             </div>
 
-            <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer">
-                <div className="flex items-center gap-2.5">
-                    <Icon
-                        icon={cameraConfig.enabled ? "solar:eye-bold" : "solar:eye-closed-bold"}
-                        className="size-4 text-neutral-400"
-                    />
-                    <span className="text-sm text-neutral-200">
-                        Mostrar cámara
-                    </span>
-                </div>
-                <Toggle
-                    checked={cameraConfig.enabled}
-                    onChange={(v) => onCameraConfigChange({ enabled: v })}
-                />
-            </label>
-
             <div className={`${cameraConfig.enabled ? "" : "opacity-50 pointer-events-none"} flex flex-col gap-5`}>
                 <div>
                     <div className="text-[10px] uppercase tracking-widest text-white/60 font-bold mb-2">
@@ -74,11 +60,10 @@ export function CameraMenu({ cameraUrl, cameraConfig, onCameraConfigChange }: Pr
                                     onClick={() =>
                                         onCameraConfigChange({ shape: shape.id as CameraShape })
                                     }
-                                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border text-[11px] transition-all ${
-                                        active
+                                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border text-[11px] transition-all ${active
                                             ? "border-[#00A3FF] bg-[#00A3FF]/10 text-white"
                                             : "border-white/10 bg-white/5 text-neutral-400 hover:bg-white/10"
-                                    }`}
+                                        }`}
                                 >
                                     <Icon icon={shape.icon} className="size-5" />
                                     {shape.label}
@@ -104,11 +89,10 @@ export function CameraMenu({ cameraUrl, cameraConfig, onCameraConfigChange }: Pr
                                             position: CORNER_POSITIONS[c.id],
                                         })
                                     }
-                                    className={`relative flex items-center justify-center gap-2 aspect-[2/1] rounded-md border text-[11px] transition-all ${
-                                        active
+                                    className={`relative flex items-center justify-center gap-2 aspect-2/1 rounded-md border text-[11px] transition-all ${active
                                             ? "border-[#00A3FF] bg-[#00A3FF]/10 text-white"
                                             : "border-white/10 bg-white/5 text-neutral-400 hover:bg-white/10"
-                                    }`}
+                                        }`}
                                 >
                                     <span
                                         className={`absolute size-2 rounded-full ${active ? "bg-[#00A3FF]" : "bg-neutral-500"}`}
@@ -132,26 +116,19 @@ export function CameraMenu({ cameraUrl, cameraConfig, onCameraConfigChange }: Pr
                     )}
                 </div>
 
-                <div>
-                    <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-white/60 font-bold mb-2">
-                        <span>Tamaño</span>
-                        <span className="text-neutral-300 tabular-nums normal-case tracking-normal">
-                            {Math.round(cameraConfig.size * 100)}%
-                        </span>
-                    </div>
-                    <input
-                        type="range"
+                <div className="space-y-4">
+                    <SliderControl
+                        label="Tamaño"
+                        value={Math.round(cameraConfig.size * 100)}
                         min={8}
                         max={40}
-                        value={Math.round(cameraConfig.size * 100)}
-                        onChange={(e) =>
-                            onCameraConfigChange({ size: Number(e.target.value) / 100 })
-                        }
-                        className="w-full accent-[#00A3FF]"
+                        suffix="%"
+                        onChange={(newValue) => onCameraConfigChange({ size: newValue / 100 })}
                     />
+
                 </div>
 
-                <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer">
+                <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/3 px-3 py-2.5 cursor-pointer">
                     <div className="flex items-center gap-2.5">
                         <Icon icon="solar:reflection-horisontal-bold" className="size-4 text-neutral-400" />
                         <span className="text-sm text-neutral-200">Reflejar (espejo)</span>
@@ -163,34 +140,5 @@ export function CameraMenu({ cameraUrl, cameraConfig, onCameraConfigChange }: Pr
                 </label>
             </div>
         </div>
-    );
-}
-
-function Toggle({
-    checked,
-    onChange,
-}: {
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-}) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            onClick={(e) => {
-                e.preventDefault();
-                onChange(!checked);
-            }}
-            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                checked ? "bg-[#00A3FF]" : "bg-white/10"
-            }`}
-        >
-            <span
-                className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white transition-transform ${
-                    checked ? "translate-x-4" : "translate-x-0"
-                }`}
-            />
-        </button>
     );
 }

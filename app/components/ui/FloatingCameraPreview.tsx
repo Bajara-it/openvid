@@ -10,10 +10,19 @@ interface Props {
     onConfigChange: (partial: Partial<CameraConfig>) => void;
 }
 
-function shapeRadius(shape: CameraConfig["shape"]): string {
+function shapeRadius(shape: CameraConfig["shape"], size: number): string {
+    // Escala el radio base con el tamaño (20-60% → 0.5-1.5 multiplier)
+    const sizeMultiplier = 0.5 + (size - 20) / 40;
+    
     if (shape === "circle") return "50%";
-    if (shape === "rounded") return "22%";
-    return "4%";
+    if (shape === "squircle") {
+        // Base ~20px, escalado dinámicamente
+        const baseRadiusPx = 20;
+        return `${Math.round(baseRadiusPx * sizeMultiplier)}px`;
+    }
+    // Square: base 6px para esquinas ligeramente redondeadas
+    const baseRadiusPx = 6;
+    return `${Math.round(baseRadiusPx * sizeMultiplier)}px`;
 }
 
 export default function FloatingCameraPreview({ stream, config, onConfigChange }: Props) {
@@ -84,7 +93,7 @@ export default function FloatingCameraPreview({ stream, config, onConfigChange }
         typeof window !== "undefined" ? window.innerWidth : 1920,
         typeof window !== "undefined" ? window.innerHeight : 1080
     );
-    const radius = shapeRadius(config.shape);
+    const radius = shapeRadius(config.shape, config.size);
 
     return (
         <div
@@ -111,7 +120,9 @@ export default function FloatingCameraPreview({ stream, config, onConfigChange }
                 autoPlay
                 muted
                 playsInline
-                className="size-full object-cover shadow-[0_10px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/20"
+                className={`size-full object-cover shadow-[0_10px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/20 ${
+                    config.shape === "squircle" ? "squircle-element" : ""
+                }`}
                 style={{
                     borderRadius: radius,
                     transform: config.mirror ? "scaleX(-1)" : undefined,
@@ -119,7 +130,9 @@ export default function FloatingCameraPreview({ stream, config, onConfigChange }
             />
 
             <div
-                className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/30"
+                className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/30 ${
+                    config.shape === "squircle" ? "squircle-element" : ""
+                }`}
                 style={{ borderRadius: radius }}
             >
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/60 text-white text-[10px] font-medium">

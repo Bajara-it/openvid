@@ -99,6 +99,7 @@ export interface VideoCanvasProps {
     cameraUrl?: string | null;
     cameraConfig?: import("./camera.types").CameraConfig | null;
     onCameraConfigChange?: (partial: Partial<import("./camera.types").CameraConfig>) => void;
+    onCameraClick?: () => void;
 }
 
 export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
@@ -145,6 +146,6 @@ export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
             reader.readAsArrayBuffer(blob);
         });
     } catch {
-        return true; // en caso de error, asumir que tiene audio
+        return true;
     }
 }

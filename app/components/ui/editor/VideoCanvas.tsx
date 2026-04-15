@@ -63,6 +63,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     cameraUrl = null,
     cameraConfig = null,
     onCameraConfigChange,
+    onCameraClick,
 }, ref) {
     const wallpaperUrl = getWallpaperUrl(selectedWallpaper);
 
@@ -948,12 +949,16 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
         if (size <= 0) return;
         const shortSide = Math.min(canvasWidth, canvasHeight);
 
+        // Escala el radio dinámicamente (igual que en preview)
+        const sizePercent = cameraConfig.size * 100; // 0.18 → 18
+        const sizeMultiplier = 0.5 + (sizePercent - 20) / 40;
+
         const radius =
             cameraConfig.shape === "circle"
                 ? size / 2
-                : cameraConfig.shape === "rounded"
-                    ? size * 0.22
-                    : size * 0.04;
+                : cameraConfig.shape === "squircle"
+                    ? Math.round(22 * sizeMultiplier)
+                    : Math.round(4 * sizeMultiplier);
 
         // Center-crop the camera frame to a square
         const srcShort = Math.min(camVideo.videoWidth, camVideo.videoHeight);
@@ -1239,6 +1244,11 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                             style={{ zIndex: 4 }}
                         >
                             <div
+                                onClick={() => {
+                                    if (onCameraClick) {
+                                        onCameraClick();
+                                    }
+                                }}
                                 onPointerDown={(e) => {
                                     if (!onCameraConfigChange || !cameraConfig) return;
                                     if (e.button !== 0) return;
@@ -1282,9 +1292,8 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                     cameraDragRef.current = null;
                                     setIsDraggingCamera(false);
                                 }}
-                                className={`absolute pointer-events-auto select-none group ${
-                                    onCameraConfigChange ? (isDraggingCamera ? "cursor-grabbing" : "cursor-grab") : ""
-                                }`}
+                                className={`absolute pointer-events-auto select-none group ${onCameraConfigChange ? (isDraggingCamera ? "cursor-grabbing" : "cursor-grab") : ""
+                                    }`}
                                 style={{
                                     width: `${cameraConfig.size * 100}cqmin`,
                                     aspectRatio: "1 / 1",
@@ -1299,14 +1308,15 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
                                     muted
                                     playsInline
                                     preload="auto"
-                                    className="size-full object-cover shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-white/15"
+                                    className={`size-full object-cover shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-white/15 ${cameraConfig.shape === "squircle" ? "squircle-element-camara" : ""
+                                        }`}
                                     style={{
-                                        borderRadius:
-                                            cameraConfig.shape === "circle"
-                                                ? "50%"
-                                                : cameraConfig.shape === "rounded"
-                                                    ? "22%"
-                                                    : "4%",
+                                        ...(cameraConfig.shape !== "squircle" && {
+                                            borderRadius:
+                                                cameraConfig.shape === "circle"
+                                                    ? "50%"
+                                                    : `${Math.round(6 * (0.5 + (cameraConfig.size - 20) / 40))}px`,
+                                        }),
                                         transform: cameraConfig.mirror ? "scaleX(-1)" : undefined,
                                     }}
                                 />

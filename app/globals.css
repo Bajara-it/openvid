@@ -163,12 +163,18 @@
     -webkit-background-clip: text;
     background-clip: text;
     animation: text-shimmer 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-
   }
+
+  .squircle-element-camara {
+    corner-shape: squircle;
+    border-radius: 40px !important;
+  }
+
 }
+
 @theme {
   --ease-elegant: cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-glow: drop-shadow(1.2px 1.2px 100.2px rgba(183,203,248,1));
+  --shadow-glow: drop-shadow(1.2px 1.2px 100.2px rgba(183, 203, 248, 1));
 
   @keyframes reveal {
     from {
@@ -188,7 +194,6 @@
 @utility animate-reveal {
   animation: reveal 0.8s var(--ease-elegant) forwards;
 }
-
 
 button {
   cursor: pointer;
@@ -255,7 +260,7 @@ button {
 .hero-3d-wrapper {
   transform-style: preserve-3d;
   will-change: transform, filter;
-  
+
   animation: heroImageAppear 1ms linear, heroImageFadeIn 1s ease-out;
   animation-timeline: scroll(root), auto;
   animation-range: 0% 5%;
@@ -266,6 +271,7 @@ button {
     transform: translateY(-12rem) translateZ(-30rem) rotateX(45deg);
     filter: drop-shadow(0 0 0 rgba(0, 163, 255, 0)) drop-shadow(0 0 0 rgba(0, 55, 128, 0));
   }
+
   to {
     transform: translateY(0rem) translateZ(0rem) rotateX(0deg);
     filter: drop-shadow(0 8px 16px rgba(0, 163, 255, 0.3)) drop-shadow(0 24px 48px rgba(0, 55, 128, 0.3));
@@ -276,6 +282,7 @@ button {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -284,4 +291,3 @@ button {
 .atropos-highlight {
   border-radius: 1rem;
 }
-

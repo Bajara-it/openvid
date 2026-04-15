@@ -33,6 +33,7 @@ export function ToolsSidebar({
     const zoomToolRef = useRef<HTMLButtonElement>(null);
     const audioToolRef = useRef<HTMLButtonElement>(null);
     const videosToolRef = useRef<HTMLButtonElement>(null);
+    const cameraToolRef = useRef<HTMLButtonElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const { startCountdown, isIdle, isRecording, isCountdown, isProcessing } = useRecording();
     const [showMobileAlert, setShowMobileAlert] = useState(false);
@@ -62,6 +63,12 @@ export function ToolsSidebar({
             videosToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }, [selectedVideoClipId]);
+
+    useEffect(() => {
+        if (activeTool === "camera" && cameraToolRef.current) {
+            cameraToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [activeTool]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -217,18 +224,19 @@ export function ToolsSidebar({
                         ref={zoomToolRef}
                     />
                     <SidebarTool
+                        icon="solar:videocamera-record-bold-duotone"
+                        label="Cámara"
+                        isActive={activeTool === "camera"}
+                        onClick={() => onToolChange("camera")}
+                        ref={cameraToolRef}
+                    />
+                    <SidebarTool
                         icon="solar:cursor-bold-duotone"
                         label="Cursor"
                         isActive={activeTool === "cursor"}
                         onClick={() => onToolChange("cursor")}
                         badge={!isCursorEnabled ? "Pronto" : undefined}
                         disabled={!isCursorEnabled}
-                    />
-                    <SidebarTool
-                        icon="solar:videocamera-record-bold-duotone"
-                        label="Cámara"
-                        isActive={activeTool === "camera"}
-                        onClick={() => onToolChange("camera")}
                     />
 
                     <div className="shrink-0 h-12" aria-hidden="true" />

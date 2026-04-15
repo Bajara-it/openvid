@@ -1,4 +1,4 @@
-export type CameraShape = "circle" | "rounded" | "square";
+export type CameraShape = "squircle" | "circle"  | "square";
 
 export type CameraCorner =
     | "top-left"
@@ -50,9 +50,9 @@ export interface AvailableDevices {
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
     enabled: false,
     deviceId: null,
-    shape: "circle",
+    shape: "squircle",
     size: 0.18,
-    position: { x: 0.95, y: 0.95 },
+    position: { x: 0.88, y: 0.88 },
     corner: "bottom-right",
     mirror: true,
 };
@@ -81,12 +81,6 @@ export const CORNER_POSITIONS: Record<
     "bottom-right": { x: 0.88, y: 0.88 },
 };
 
-/**
- * Compute the camera bubble's pixel layout inside a container, clamped so the
- * full bubble stays inside the container regardless of position/size. Callers
- * pass container dimensions (viewport, canvas, or preview box) and get back
- * size + top-left pixel coords ready to apply as CSS or canvas draw coords.
- */
 export function getCameraLayout(
     config: CameraConfig,
     containerWidth: number,
@@ -107,9 +101,26 @@ export function getCameraLayout(
 }
 
 export const CAMERA_SHAPES: Array<{ id: CameraShape; label: string; icon: string }> = [
-    { id: "circle", label: "Círculo", icon: "solar:record-circle-bold" },
-    { id: "rounded", label: "Redondeado", icon: "solar:squircle-bold" },
-    { id: "square", label: "Cuadrado", icon: "solar:stop-bold" },
+    { id: "squircle", label: "Squircle", icon: "boxicons:squircle-filled" },
+    { id: "circle", label: "Círculo", icon: "material-symbols:circle" },
+    { id: "square", label: "Cuadrado", icon: "material-symbols:square-rounded" },
+];
+
+// Storage key for persisting recording setup
+export const RECORDING_SETUP_STORAGE_KEY = "openvid:recordingSetup";
+
+// Valid camera shapes for validation
+export const VALID_CAMERA_SHAPES: CameraShape[] = ["squircle", "circle", "square"];
+
+// Valid camera corners for validation
+export const VALID_CAMERA_CORNERS: CameraCorner[] = ["top-left", "top-right", "bottom-left", "bottom-right", "custom"];
+
+// Corner position buttons with labels and icons
+export const CORNER_BUTTONS: Array<{ id: Exclude<CameraCorner, "custom">; label: string; icon: string }> = [
+    { id: "top-left", label: "Arriba izq.", icon: "solar:arrow-up-bold" },
+    { id: "top-right", label: "Arriba der.", icon: "solar:arrow-up-bold" },
+    { id: "bottom-left", label: "Abajo izq.", icon: "solar:arrow-down-bold" },
+    { id: "bottom-right", label: "Abajo der.", icon: "solar:arrow-down-bold" },
 ];
 
 export async function enumerateMediaDevices(): Promise<AvailableDevices> {

@@ -7,6 +7,7 @@ export interface VideoTrackClip {
     trimStart: number;
     trimEnd: number;
     thumbnailUrl?: string;
+    hasCamera?: boolean;
 }
 
 export function calculateTotalDuration(clips: VideoTrackClip[]): number {
