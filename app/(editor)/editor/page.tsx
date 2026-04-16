@@ -1374,7 +1374,7 @@ export default function Editor() {
     useEffect(() => {
         updateTimeSmoothRef.current = () => {
             if (justEndedRef.current) return;
-            if (isSwitchingClipRef.current) { // ← skip durante transición
+            if (isSwitchingClipRef.current) {
                 if (isPlaying && !isDraggingPlayhead) {
                     animationFrameRef.current = requestAnimationFrame(updateTimeSmoothRef.current);
                 }
@@ -2023,6 +2023,7 @@ export default function Editor() {
                         selectedZoomFragmentId={selectedZoomFragmentId}
                         selectedAudioTrackId={selectedAudioTrackId}
                         selectedVideoClipId={selectedVideoClipId}
+                        selectedElementId={selectedElementId}
                         newVideosCount={newVideosCount}
                     />
                 </div>

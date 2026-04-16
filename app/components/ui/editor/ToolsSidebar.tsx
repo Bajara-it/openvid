@@ -15,6 +15,7 @@ interface ExtendedToolsSidebarProps extends ToolsSidebarProps {
     selectedZoomFragmentId?: string | null;
     selectedAudioTrackId?: string | null;
     selectedVideoClipId?: string | null;
+    selectedElementId?: string | null;
     newVideosCount?: number;
 }
 
@@ -27,6 +28,7 @@ export function ToolsSidebar({
     selectedZoomFragmentId,
     selectedAudioTrackId,
     selectedVideoClipId,
+    selectedElementId,
     newVideosCount = 0,
 }: ExtendedToolsSidebarProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +36,7 @@ export function ToolsSidebar({
     const audioToolRef = useRef<HTMLButtonElement>(null);
     const videosToolRef = useRef<HTMLButtonElement>(null);
     const cameraToolRef = useRef<HTMLButtonElement>(null);
+    const elementsToolRef = useRef<HTMLButtonElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const { startCountdown, isIdle, isRecording, isCountdown, isProcessing } = useRecording();
     const [showMobileAlert, setShowMobileAlert] = useState(false);
@@ -69,6 +72,12 @@ export function ToolsSidebar({
             cameraToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }, [activeTool]);
+
+    useEffect(() => {
+        if (selectedElementId && elementsToolRef.current) {
+            elementsToolRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [selectedElementId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -190,6 +199,7 @@ export function ToolsSidebar({
                         label="Elementos"
                         isActive={activeTool === "elements"}
                         onClick={() => onToolChange("elements")}
+                        ref={elementsToolRef}
                         icon={
                             <svg
                                 width="24"

@@ -396,13 +396,13 @@ export default function RecordingSetupDialog({ open, onClose, onStart }: Props) 
                                                         autoPlay
                                                         muted
                                                         playsInline
-                                                        className={`size-full object-cover border-2 border-white/20 shadow-[0_8px_40px_rgba(0,163,255,0.25)] transition-all duration-300 ${setup.camera.shape === "squircle" ? "squircle-element-camara" : ""
+                                                        className={`size-full object-cover border-2 border-white/20 shadow-[0_8px_40px_rgba(0,163,255,0.25)] transition-all duration-300 ${setup.camera.shape === "squircle" ? "squircle-element-camera" : ""
                                                             }`}
                                                         style={previewFrameStyle}
                                                     />
                                                 ) : (
                                                     <div
-                                                        className={`size-full flex items-center justify-center border-2 border-dashed border-white/20 text-neutral-500 transition-all duration-300 ${setup.camera.shape === "squircle" ? "squircle-element-camara" : ""
+                                                        className={`size-full flex items-center justify-center border-2 border-dashed border-white/20 text-neutral-500 transition-all duration-300 ${setup.camera.shape === "squircle" ? "squircle-element-camera" : ""
                                                             }`}
                                                         style={previewFrameStyle}
                                                     >

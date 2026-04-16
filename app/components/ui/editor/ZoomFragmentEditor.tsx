@@ -169,7 +169,7 @@ export function ZoomFragmentEditor({
                     </div>
                     <div
                         ref={focusPreviewRef}
-                        className="relative w-full squircle-element overflow-hidden bg-[#0a0a0e] border border-white/10"
+                        className="relative w-full squircle-element overflow-hidden bg-[#0a0a0e] border border-white/10 select-none"
                         style={{ aspectRatio: videoDimensions ? `${videoDimensions.width}/${videoDimensions.height}` : "16/9" }}
                         onClick={handlePreviewClick}
                     >
@@ -177,18 +177,18 @@ export function ZoomFragmentEditor({
                             <img
                                 src={dynamicThumbnail}
                                 alt="Video preview"
-                                className="absolute inset-0 w-full h-full object-cover opacity-60"
+                                className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
                             />
                         ) : videoUrl ? (
                             <video
                                 src={videoUrl}
-                                className="absolute inset-0 w-full h-full object-cover opacity-60"
+                                className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
                                 muted
                             />
                         ) : null}
 
                         <div
-                            className="absolute border border-dashed border-blue-500/50 bg-linear-to-b from-blue-500/20 to-transparent squircle-element pointer-events-none transition-all duration-200"
+                            className="absolute border border-dashed border-blue-500/50 bg-linear-to-b from-blue-500/20 to-transparent squircle-element pointer-events-none transition-opacity duration-200"
                             style={{
                                 width: `${100 / zoomLevelToFactor(fragment.zoomLevel)}%`,
                                 height: `${100 / zoomLevelToFactor(fragment.zoomLevel)}%`,
@@ -196,6 +196,7 @@ export function ZoomFragmentEditor({
                                 top: `${fragment.focusY}%`,
                                 transform: 'translate(-50%, -50%)',
                                 opacity: movementEnabled && editingPoint === 'end' ? 0.4 : 1,
+                                willChange: "left, top"
                             }}
                         />
 
@@ -211,7 +212,7 @@ export function ZoomFragmentEditor({
                             const y2 = fragment.focusY + dy * ratio;
 
                             return (
-                                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5, willChange: "contents" }}>
                                     <defs>
                                         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                                             <polygon points="0 0, 10 3.5, 0 7" fill="rgba(16, 185, 129, 0.7)" />
@@ -233,7 +234,7 @@ export function ZoomFragmentEditor({
 
                         {movementEnabled && (
                             <div
-                                className="absolute border border-dashed border-emerald-500/50 bg-linear-to-b from-emerald-500/20 to-transparent squircle-element pointer-events-none transition-all duration-200"
+                                className="absolute border border-dashed border-emerald-500/50 bg-linear-to-b from-emerald-500/20 to-transparent squircle-element pointer-events-none transition-opacity duration-200"
                                 style={{
                                     width: `${100 / zoomLevelToFactor(fragment.zoomLevel)}%`,
                                     height: `${100 / zoomLevelToFactor(fragment.zoomLevel)}%`,
@@ -241,18 +242,19 @@ export function ZoomFragmentEditor({
                                     top: `${movementEndY}%`,
                                     transform: 'translate(-50%, -50%)',
                                     opacity: editingPoint === 'start' ? 0.4 : 1,
+                                    willChange: "left, top"
                                 }}
                             />
                         )}
 
                         <div
                             data-drag-handle
-                            className={`absolute z-10 cursor-grab active:cursor-grabbing transition-all ${movementEnabled && editingPoint === 'end' ? 'opacity-60 scale-90' : ''
-                                }`}
+                            className={`absolute z-10 cursor-grab active:cursor-grabbing touch-none transition-[opacity,transform] duration-150 ${movementEnabled && editingPoint === 'end' ? 'opacity-60 scale-90' : ''}`}
                             style={{
                                 left: `${fragment.focusX}%`,
                                 top: `${fragment.focusY}%`,
                                 transform: "translate(-50%, -50%)",
+                                willChange: "left, top"
                             }}
                             onPointerDown={(e) => handlePointerDown(e, 'start')}
                         >
@@ -264,12 +266,12 @@ export function ZoomFragmentEditor({
                         {movementEnabled && (
                             <div
                                 data-drag-handle
-                                className={`absolute z-10 cursor-grab active:cursor-grabbing transition-all ${editingPoint === 'start' ? 'opacity-60 scale-90' : ''
-                                    }`}
+                                className={`absolute z-10 cursor-grab active:cursor-grabbing touch-none transition-[opacity,transform] duration-150 ${editingPoint === 'start' ? 'opacity-60 scale-90' : ''}`}
                                 style={{
                                     left: `${movementEndX}%`,
                                     top: `${movementEndY}%`,
                                     transform: "translate(-50%, -50%)",
+                                    willChange: "left, top"
                                 }}
                                 onPointerDown={(e) => handlePointerDown(e, 'end')}
                             >
@@ -287,7 +289,6 @@ export function ZoomFragmentEditor({
                     </div>
                 </div>
 
-                {/* Movement Toggle */}
                 <div className="space-y-3 p-3 bg-white/3 border border-white/8 rounded-lg">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -331,30 +332,28 @@ export function ZoomFragmentEditor({
                             const initialStartOffset = startOffset;
                             const initialEndOffset = endOffset;
 
+                            // HACK: Forzamos un gap mínimo de tiempo equivalente a ~24px para evitar que los controles se solapen
+                            // Esto reemplaza el problemático "minWidth: '28px'" de CSS que rompía los límites.
+                            const minTimeGap = Math.max(0.1, (24 / (rect.width || 1)) * holdDuration);
+
                             const handleMove = (ev: MouseEvent) => {
                                 const deltaX = ev.clientX - initialX;
                                 const deltaPct = (deltaX / rect.width) * 100;
                                 const deltaTime = (deltaPct / 100) * holdDuration;
 
                                 if (type === 'start') {
-                                    const newStart = Math.max(0, Math.min(endOffset - 0.1, initialStartOffset + deltaTime));
+                                    // Limitamos para no cruzar el endOffset ni salir de 0
+                                    const newStart = Math.max(0, Math.min(initialEndOffset - minTimeGap, initialStartOffset + deltaTime));
                                     onUpdate({ movementStartOffset: Math.round(newStart * 10) / 10 });
                                 } else if (type === 'end') {
-                                    const newEnd = Math.max(startOffset + 0.1, Math.min(holdDuration, initialEndOffset + deltaTime));
+                                    // Limitamos para no cruzar el startOffset ni salir de holdDuration
+                                    const newEnd = Math.max(initialStartOffset + minTimeGap, Math.min(holdDuration, initialEndOffset + deltaTime));
                                     onUpdate({ movementEndOffset: Math.round(newEnd * 10) / 10 });
                                 } else if (type === 'range') {
+                                    // Matemática simplificada y a prueba de errores para arrastrar el bloque entero
                                     const duration = initialEndOffset - initialStartOffset;
-                                    let newStart = initialStartOffset + deltaTime;
-                                    let newEnd = initialEndOffset + deltaTime;
-
-                                    if (newStart < 0) {
-                                        newStart = 0;
-                                        newEnd = duration;
-                                    }
-                                    if (newEnd > holdDuration) {
-                                        newEnd = holdDuration;
-                                        newStart = holdDuration - duration;
-                                    }
+                                    const newStart = Math.max(0, Math.min(holdDuration - duration, initialStartOffset + deltaTime));
+                                    const newEnd = newStart + duration;
 
                                     onUpdate({
                                         movementStartOffset: Math.round(newStart * 10) / 10,
@@ -402,7 +401,7 @@ export function ZoomFragmentEditor({
                                             <div
                                                 className="absolute top-1.5 bottom-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-sm cursor-grab active:cursor-grabbing hover:bg-emerald-500/30 transition-all"
                                                 style={{
-                                                    left: `${moveStartPct}%`,
+                                                    left: `min(${moveStartPct}%, calc(100% - 28px))`,
                                                     width: `${moveEndPct - moveStartPct}%`,
                                                     minWidth: '28px'
                                                 }}
@@ -412,7 +411,7 @@ export function ZoomFragmentEditor({
                                                     className="absolute -left-1.5 top-0 bottom-0 w-4 cursor-ew-resize group/left flex items-center justify-center z-20"
                                                     onMouseDown={(e) => { e.stopPropagation(); handleTimelineDrag(e, 'start'); }}
                                                 >
-                                                    <div className="w-[2px] h-3 bg-emerald-400/50 group-hover/left:bg-emerald-300 rounded-full transition-colors" />
+                                                    <div className="w-0.5 h-3 bg-emerald-400/50 group-hover/left:bg-emerald-300 rounded-full transition-colors" />
                                                 </div>
 
                                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
@@ -423,11 +422,11 @@ export function ZoomFragmentEditor({
                                                     className="absolute -right-1.5 top-0 bottom-0 w-4 cursor-ew-resize group/right flex items-center justify-center z-20"
                                                     onMouseDown={(e) => { e.stopPropagation(); handleTimelineDrag(e, 'end'); }}
                                                 >
-                                                    <div className="w-[2px] h-3 bg-emerald-400/50 group-hover/right:bg-emerald-300 rounded-full transition-colors" />
+                                                    <div className="w-0.5 h-3 bg-emerald-400/50 group-hover/right:bg-emerald-300 rounded-full transition-colors" />
                                                 </div>
                                             </div>
 
-                                            <div className="absolute inset-0 flex justify-between px-1 pointer-events-none opacity-10">
+                                            <div className="absolute inset-0 flex justify-between px-1 pointer-events-none opacity-25">
                                                 {[...Array(6)].map((_, i) => (
                                                     <div key={i} className="w-px h-full bg-white" />
                                                 ))}
@@ -445,11 +444,11 @@ export function ZoomFragmentEditor({
                                     <div className="flex items-center justify-between px-0.5">
                                         <div className="flex gap-4 text-[9px] font-mono text-white/30">
                                             <span className="flex items-center gap-1.5">
-                                                <span className="text-emerald-500/50">START</span>
+                                                <span className="text-emerald-500/50">INICIO</span>
                                                 <span className="text-white/60">{startOffset.toFixed(1)}s</span>
                                             </span>
                                             <span className="flex items-center gap-1.5">
-                                                <span className="text-emerald-500/50">END</span>
+                                                <span className="text-emerald-500/50">FIN</span>
                                                 <span className="text-white/60">{endOffset.toFixed(1)}s</span>
                                             </span>
                                         </div>

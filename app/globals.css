@@ -165,7 +165,7 @@
     animation: text-shimmer 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  .squircle-element-camara {
+  .squircle-element-camera {
     corner-shape: squircle;
     border-radius: 40px !important;
   }

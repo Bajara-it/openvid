@@ -328,7 +328,7 @@ async function exportWithFFmpegWebM(
     // Actualizar progreso durante la codificación VP8
     ffmpeg.on("progress", ({ progress }) => {
         if (progress > 0) {
-            const encodingProgress = 70 + Math.round(progress * 20); // 70% → 90%
+            const encodingProgress = 70 + Math.round(progress * 20);
             setProgress({
                 status: "finalizing",
                 progress: Math.min(encodingProgress, 90),

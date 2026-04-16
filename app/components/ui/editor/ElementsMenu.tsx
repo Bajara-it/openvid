@@ -11,6 +11,17 @@ import { Button } from "@/components/ui/button";
 import { SVG_COMPONENTS } from "@/components/canvas-svg";
 import { TooltipAction } from "@/components/ui/tooltip-action";
 
+interface UploadedImage {
+    id: string;
+    name: string;
+    dataUrl: string;
+    uploadedAt: number;
+}
+
+const STORAGE_KEY = "openvid-uploaded-images";
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FORMATS = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
+
 export function ElementsMenu({
     onAddElement,
     selectedElement,
@@ -19,7 +30,7 @@ export function ElementsMenu({
     onBringToFront,
     onSendToBack
 }: ElementsMenuProps) {
-    const [mode, setMode] = useState<"text" | "elements">("elements");
+    const [mode, setMode] = useState<"text" | "elements" | "uploads">("elements");
 
     // Professional default values for elements
     const [shapeSize, setShapeSize] = useState(20);
@@ -38,6 +49,20 @@ export function ElementsMenu({
 
     const [selectedSvgCategory, setSelectedSvgCategory] = useState<string>("all");
     const [selectedImageCategory, setSelectedImageCategory] = useState<string>("all");
+
+    const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>(() => {
+        // Load from localStorage on initial mount
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                return JSON.parse(stored) as UploadedImage[];
+            }
+        } catch (error) {
+            console.error("Error loading uploaded images:", error);
+        }
+        return [];
+    });
+    const [isUploading, setIsUploading] = useState(false);
 
     const isSyncing = useRef(false);
     const lastSelectedId = useRef<string | null>(null);
@@ -122,6 +147,132 @@ export function ElementsMenu({
         }
     }, [textContent, textFontSize, textColor, textOpacity, textFontFamily, textFontWeight, selectedElement?.id, selectedElement?.type, onUpdateElement]);
 
+    // Save uploaded images to localStorage whenever they change
+    useEffect(() => {
+        if (uploadedImages.length > 0) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(uploadedImages));
+            } catch (error) {
+                console.error("Error saving uploaded images:", error);
+            }
+        } else {
+            // Remove from localStorage if no images
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }, [uploadedImages]);
+
+    // Handler to upload images and auto-add to canvas
+    const handleImageUpload = useCallback(async (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+
+        setIsUploading(true);
+        const newImages: UploadedImage[] = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Validate file type
+            if (!ACCEPTED_FORMATS.includes(file.type)) {
+                console.warn(`Formato no soportado: ${file.type}`);
+                continue;
+            }
+
+            // Validate file size
+            if (file.size > MAX_FILE_SIZE) {
+                console.warn(`Archivo muy grande: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                continue;
+            }
+
+            try {
+                // Convert to base64 data URL
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+
+                const uploadedImage: UploadedImage = {
+                    id: `upload-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                    name: file.name,
+                    dataUrl,
+                    uploadedAt: Date.now(),
+                };
+
+                newImages.push(uploadedImage);
+
+                // Auto-add to canvas immediately
+                const timestamp = Date.now() + i; // Offset to ensure unique zIndex
+                const newElement: ImageElement = {
+                    id: `image-${timestamp}-${Math.random().toString(36).substring(2, 9)}`,
+                    type: "image",
+                    category: "uploads",
+                    x: 50,
+                    y: 50,
+                    width: imageSize,
+                    height: imageSize,
+                    rotation: 0,
+                    opacity: imageOpacity / 100,
+                    zIndex: timestamp,
+                    imagePath: dataUrl,
+                };
+                onAddElement(newElement);
+            } catch (error) {
+                console.error(`Error uploading ${file.name}:`, error);
+            }
+        }
+
+        if (newImages.length > 0) {
+            setUploadedImages(prev => [...prev, ...newImages]);
+        }
+
+        setIsUploading(false);
+    }, [imageSize, imageOpacity, onAddElement]);
+
+    // Handler to delete an uploaded image
+    const handleDeleteUploadedImage = useCallback((id: string) => {
+        setUploadedImages(prev => {
+            const filtered = prev.filter(img => img.id !== id);
+            // Clear localStorage if no images left
+            if (filtered.length === 0) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+            return filtered;
+        });
+    }, []);
+
+    // Handler to manually add uploaded image to canvas (from gallery)
+    const handleAddUploadedImage = useCallback((image: UploadedImage) => {
+        const timestamp = Date.now();
+        const newElement: ImageElement = {
+            id: `image-${timestamp}-${Math.random().toString(36).substring(2, 9)}`,
+            type: "image",
+            category: "uploads",
+            x: 50,
+            y: 50,
+            width: imageSize,
+            height: imageSize,
+            rotation: 0,
+            opacity: imageOpacity / 100,
+            zIndex: timestamp,
+            imagePath: image.dataUrl,
+        };
+        onAddElement(newElement);
+    }, [imageSize, imageOpacity, onAddElement]);
+
+    // Drag & drop handlers
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const files = e.dataTransfer.files;
+        handleImageUpload(files);
+    }, [handleImageUpload]);
+
     const filteredSvgItems = selectedSvgCategory === "all"
         ? SVG_CATEGORIES.flatMap(cat => cat.items.map(item => ({ ...item, category: cat.id })))
         : SVG_CATEGORIES.find(cat => cat.id === selectedSvgCategory)?.items.map(item => ({ ...item, category: selectedSvgCategory })) || [];
@@ -197,7 +348,7 @@ export function ElementsMenu({
                 <span>Elementos</span>
             </div>
 
-            <div className="grid grid-cols-2 bg-[#09090B] squircle-element p-1 text-xs font-medium border border-white/5">
+            <div className="grid grid-cols-3 bg-[#09090B] squircle-element p-1 text-xs font-medium border border-white/5">
                 <button
                     className={`flex justify-center items-center gap-1.5 py-1.5 rounded transition ${mode === "elements" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}
                     onClick={() => setMode("elements")}
@@ -211,6 +362,14 @@ export function ElementsMenu({
                 >
                     <Icon icon="iconoir:text-size" width="14" />
                     Texto
+                </button>
+
+                <button
+                    className={`flex justify-center items-center gap-1.5 py-1.5 rounded transition ${mode === "uploads" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"}`}
+                    onClick={() => setMode("uploads")}
+                >
+                    <Icon icon="ph:upload-simple-bold" width="14" />
+                    Cargar
                 </button>
             </div>
 
@@ -722,9 +881,114 @@ export function ElementsMenu({
                     )}
                 </div>
             )}
+
+            {mode === "uploads" && (
+                <div className="flex flex-col gap-5 animate-in fade-in duration-150">
+                    <div className="space-y-2">
+                        <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
+                            Subir imágenes
+                        </div>
+
+                        <label
+                            className={`group flex flex-col items-center justify-center w-full bg-[#09090B] border border-dashed border-white/10 hover:border-white/30 hover:bg-white/3 squircle-element p-8 text-center cursor-pointer transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                        >
+                            {isUploading ? (
+                                <div className="flex flex-col items-center justify-center w-full">
+                                    <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 transition-transform">
+                                        <Icon icon="svg-spinners:180-ring-with-bg" width="24" className="text-white/50" />
+                                    </div>
+                                    <p className="text-sm font-medium text-white/70 mb-1">Subiendo...</p>
+                                    <p className="text-xs text-white/40">Procesando imágenes</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center w-full">
+                                    <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+                                        <Icon icon="solar:upload-minimalistic-outline" width="24" className="text-white/40 group-hover:text-white/70 transition-colors" />
+                                    </div>
+                                    <p className="text-sm font-medium text-white/70 mb-1">Subir imágenes</p>
+                                    <p className="text-xs text-white/40 mb-5">Haz clic o arrastra un archivo aquí</p>
+
+                                    <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap squircle-element font-medium transition-all border border-white/10 bg-transparent hover:bg-white/10 h-9 px-4 py-2 w-full text-xs text-white/70 group-hover:text-white shadow-xs">
+                                        <span>Seleccionar archivo</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <input
+                                type="file"
+                                className="hidden"
+                                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                                multiple
+                                onChange={(e) => handleImageUpload(e.target.files)}
+                                disabled={isUploading}
+                            />
+                        </label>
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
+                                Tus imágenes ({uploadedImages.length})
+                            </div>
+                            {uploadedImages.length > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setUploadedImages([]);
+                                        localStorage.removeItem(STORAGE_KEY);
+                                    }}
+                                    className="text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
+                                >
+                                    Limpiar todo
+                                </button>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {uploadedImages.length === 0 ? (
+                                <div className="col-span-3 py-10 flex flex-col items-center justify-center text-center bg-[#09090B] border border-dashed border-white/10 squircle-element">
+                                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-3">
+                                        <Icon icon="mynaui:image" width="20" className="text-white/40" />
+                                    </div>
+                                    <span className="text-xs font-medium text-white/60 mb-0.5">Aún no hay imágenes</span>
+                                    <span className="text-[10px] text-white/40">Las imágenes que subas aparecerán aquí</span>
+                                </div>
+                            ) : (
+                                uploadedImages.map((image) => (
+                                    <div
+                                        key={image.id}
+                                        className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5 hover:border-white/30 transition-all cursor-pointer"
+                                        onClick={() => handleAddUploadedImage(image)}
+                                        title={`${image.name}\nHaz clic para agregar otra vez al canvas`}
+                                    >
+                                        <img
+                                            src={image.dataUrl}
+                                            alt={image.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Icon icon="ph:plus-circle-bold" width="24" className="text-white" />
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteUploadedImage(image.id);
+                                            }}
+                                            className="absolute top-1 right-1 p-1 rounded bg-black/60 hover:bg-red-500/80 text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+                                        >
+                                            <Icon icon="ph:trash-bold" width="12" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
 function ProgressiveImg({
     src,
     alt,
