@@ -68,6 +68,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     cameraConfig = null,
     onCameraConfigChange,
     onCameraClick,
+    videoMaskConfig,
 }, ref) {
     const wallpaperUrl = getWallpaperUrl(selectedWallpaper);
 
@@ -107,12 +108,6 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
 
         // Calculate 3-phase state
         const phaseState = calculateZoomPhaseState(activeZoomFragment, currentTime);
-
-        // CSS preview: transform-origin is center, so translate % is relative to element size.
-        // To pin focusX% to the screen center after scale(S) translate(TX%) with origin-center:
-        //   T(cx) · S · T(-cx) · T(txPx) maps focusPx to center
-        //   → txPx = cx - focusPx  (independent of scale)
-        // Expressed as percentage of the element: TX% = (50 - focusX)
         const translateX = 50 - phaseState.focusX;
         const translateY = 50 - phaseState.focusY;
 
@@ -159,7 +154,6 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     // Image zoom state (for photo mode)
     const [imageZoomScale, setImageZoomScale] = useState(1);
 
-    // Set initial video src when videoUrl changes (initial load only — transitions manage src imperatively)
     const lastSetVideoUrlRef = useRef<string | null>(null);
     const preservedVideoStateRef = useRef<{ time: number; playing: boolean } | null>(null);
 
@@ -257,25 +251,26 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const canvasContainerRef = useRef<HTMLDivElement>(null);
 
-    // Calculate mask styles - will be applied to mockup wrapper when mockup exists, or to image directly
+    // Calculate mask styles — selects video or image mask based on mediaType
     const maskStyles = useMemo(() => {
-        if (!imageMaskConfig || !imageMaskConfig.enabled) return {};
+        const config = mediaType === "video" ? videoMaskConfig : imageMaskConfig;
+        if (!config || !config.enabled) return {};
 
         const masks = [];
-        if (imageMaskConfig.top) {
-            masks.push(`linear-gradient(180deg, transparent ${imageMaskConfig.top.from}%, black ${imageMaskConfig.top.to ?? 100}%)`);
+        if (config.top) {
+            masks.push(`linear-gradient(180deg, transparent ${config.top.from}%, black ${config.top.to ?? 100}%)`);
         }
-        if (imageMaskConfig.bottom) {
-            masks.push(`linear-gradient(0deg, transparent ${imageMaskConfig.bottom.from}%, black ${imageMaskConfig.bottom.to ?? 100}%)`);
+        if (config.bottom) {
+            masks.push(`linear-gradient(0deg, transparent ${config.bottom.from}%, black ${config.bottom.to ?? 100}%)`);
         }
-        if (imageMaskConfig.left) {
-            masks.push(`linear-gradient(90deg, transparent ${imageMaskConfig.left.from}%, black ${imageMaskConfig.left.to ?? 100}%)`);
+        if (config.left) {
+            masks.push(`linear-gradient(90deg, transparent ${config.left.from}%, black ${config.left.to ?? 100}%)`);
         }
-        if (imageMaskConfig.right) {
-            masks.push(`linear-gradient(270deg, transparent ${imageMaskConfig.right.from}%, black ${imageMaskConfig.right.to ?? 100}%)`);
+        if (config.right) {
+            masks.push(`linear-gradient(270deg, transparent ${config.right.from}%, black ${config.right.to ?? 100}%)`);
         }
-        if (imageMaskConfig.angle !== undefined) {
-            masks.push(`linear-gradient(${imageMaskConfig.angle}deg, transparent ${imageMaskConfig.angleFrom ?? 0}%, black ${imageMaskConfig.angleTo ?? 100}%)`);
+        if (config.angle !== undefined) {
+            masks.push(`linear-gradient(${config.angle}deg, transparent ${config.angleFrom ?? 0}%, black ${config.angleTo ?? 100}%)`);
         }
 
         if (masks.length === 0) return {};
@@ -286,7 +281,7 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             maskImage: masks.join(', '),
             maskComposite: 'intersect'
         };
-    }, [imageMaskConfig]);
+    }, [mediaType, videoMaskConfig, imageMaskConfig]);
 
     const hasMask = Object.keys(maskStyles).length > 0;
     const hasMockup = mockupId && mockupId !== "none";
@@ -1040,10 +1035,90 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             ctx.drawImage(fgCanvas, -fgOffsetX, -fgOffsetY, fgWidth, fgHeight);
             ctx.restore();
         } else {
-            ctx.save();
-            applyVideoZoom(ctx);
-            drawMockupAndMedia(ctx, containerX, containerY, containerWidth, containerHeight, video!, false);
-            ctx.restore();
+            const hasVideoMask = !!(videoMaskConfig?.enabled && (
+                videoMaskConfig.top || videoMaskConfig.bottom ||
+                videoMaskConfig.left || videoMaskConfig.right ||
+                videoMaskConfig.angle !== undefined
+            ));
+
+            if (hasVideoMask) {
+                // Draw video+mockup onto an offscreen layer (no zoom) then apply the mask,
+                // and finally composite back to the main canvas WITH zoom applied.
+                // This mirrors the CSS behaviour: mask is on the element, zoom is on the outer wrapper.
+                const videoLayer = document.createElement('canvas');
+                videoLayer.width = canvasWidth;
+                videoLayer.height = canvasHeight;
+                const vlCtx = videoLayer.getContext('2d', canvasCtxOptions);
+                if (vlCtx) {
+                    vlCtx.imageSmoothingEnabled = true;
+                    vlCtx.imageSmoothingQuality = 'high';
+                    drawMockupAndMedia(vlCtx, containerX, containerY, containerWidth, containerHeight, video!, false);
+
+                    // Apply each gradient mask using destination-in (= CSS maskComposite: intersect)
+                    vlCtx.globalCompositeOperation = 'destination-in';
+                    const vm = videoMaskConfig!;
+                    const [cX, cY, cW, cH] = [containerX, containerY, containerWidth, containerHeight];
+
+                    if (vm.top) {
+                        const g = vlCtx.createLinearGradient(cX, cY, cX, cY + cH);
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop(vm.top.from / 100, 'transparent');
+                        g.addColorStop((vm.top.to ?? 100) / 100, 'black');
+                        vlCtx.fillStyle = g;
+                        vlCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    }
+                    if (vm.bottom) {
+                        const g = vlCtx.createLinearGradient(cX, cY + cH, cX, cY);
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop(vm.bottom.from / 100, 'transparent');
+                        g.addColorStop((vm.bottom.to ?? 100) / 100, 'black');
+                        vlCtx.fillStyle = g;
+                        vlCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    }
+                    if (vm.left) {
+                        const g = vlCtx.createLinearGradient(cX, cY, cX + cW, cY);
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop(vm.left.from / 100, 'transparent');
+                        g.addColorStop((vm.left.to ?? 100) / 100, 'black');
+                        vlCtx.fillStyle = g;
+                        vlCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    }
+                    if (vm.right) {
+                        const g = vlCtx.createLinearGradient(cX + cW, cY, cX, cY);
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop(vm.right.from / 100, 'transparent');
+                        g.addColorStop((vm.right.to ?? 100) / 100, 'black');
+                        vlCtx.fillStyle = g;
+                        vlCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    }
+                    if (vm.angle !== undefined) {
+                        const angleRad = (vm.angle * Math.PI) / 180;
+                        const cx2 = cX + cW / 2;
+                        const cy2 = cY + cH / 2;
+                        const diag = Math.sqrt(cW * cW + cH * cH) / 2;
+                        const g = vlCtx.createLinearGradient(
+                            cx2 - Math.cos(angleRad) * diag, cy2 - Math.sin(angleRad) * diag,
+                            cx2 + Math.cos(angleRad) * diag, cy2 + Math.sin(angleRad) * diag
+                        );
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop((vm.angleFrom ?? 0) / 100, 'transparent');
+                        g.addColorStop((vm.angleTo ?? 100) / 100, 'black');
+                        vlCtx.fillStyle = g;
+                        vlCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    }
+
+                    // Composite masked layer to main canvas with zoom applied
+                    ctx.save();
+                    applyVideoZoom(ctx);
+                    ctx.drawImage(videoLayer, 0, 0);
+                    ctx.restore();
+                }
+            } else {
+                ctx.save();
+                applyVideoZoom(ctx);
+                drawMockupAndMedia(ctx, containerX, containerY, containerWidth, containerHeight, video!, false);
+                ctx.restore();
+            }
         }
 
         ctx.save();
@@ -1196,8 +1271,6 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, VideoCanvasProps>(funct
             </div>
             <canvas
                 ref={exportCanvasRef}
-                width={exportDimensions.width}
-                height={exportDimensions.height}
                 className="hidden"
             />
 

@@ -110,6 +110,7 @@ export default function Editor() {
     const [apply3DToBackground, setApply3DToBackground] = useState(false);
     const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
     const [imageMaskConfig, setImageMaskConfig] = useState<ImageMaskConfig>(DEFAULT_MASK_CONFIG);
+    const [videoMaskConfig, setVideoMaskConfig] = useState<ImageMaskConfig>(DEFAULT_MASK_CONFIG);
 
     const [activeTool, setActiveTool] = useState<Tool>("screenshot");
     const [backgroundTab, setBackgroundTab] = useState<BackgroundTab>("wallpaper");
@@ -870,6 +871,7 @@ export default function Editor() {
                 imageTransform,
                 apply3DToBackground,
                 imageMaskConfig,
+                videoMaskConfig,
             });
         }, 300);
         return () => {
@@ -883,7 +885,7 @@ export default function Editor() {
         aspectRatio, customDimensions, cropArea, trimRange,
         zoomFragments, mockupId, mockupConfig, canvasElements,
         audioTracks, muteOriginalAudio, masterVolume, cameraConfig,
-        videoTransform, imageTransform, apply3DToBackground, imageMaskConfig,
+        videoTransform, imageTransform, apply3DToBackground, imageMaskConfig, videoMaskConfig,
         setEditorState
     ]);
 
@@ -913,6 +915,7 @@ export default function Editor() {
         setImageTransform(editorState.imageTransform);
         setApply3DToBackground(editorState.apply3DToBackground);
         setImageMaskConfig(editorState.imageMaskConfig);
+        setVideoMaskConfig(editorState.videoMaskConfig);
     }, [editorState]);
 
     // Handler para cambiar el mockup
@@ -2781,6 +2784,8 @@ export default function Editor() {
                         imageTransform={imageTransform}
                         apply3DToBackground={apply3DToBackground}
                         imageMaskConfig={imageMaskConfig}
+                        videoMaskConfig={videoMaskConfig}
+                        onVideoMaskConfigChange={setVideoMaskConfig}
                         padding={padding}
                         roundedCorners={roundedCorners}
                         shadows={shadows}
@@ -2855,6 +2860,9 @@ export default function Editor() {
                                 onCustomAspectRatioChange={handleCustomDimensionsChange}
                                 onOpenCropper={handleOpenCropper}
                                 onZoomChange={handleZoomChange}
+                                videoMaskConfig={videoMaskConfig}
+                                onVideoMaskConfigChange={setVideoMaskConfig}
+                                videoPreviewImageUrl={getThumbnailForTime(currentDisplayTime)?.dataUrl ?? null}
                             />
 
                             <Suspense fallback={<TimelineSkeleton />}>

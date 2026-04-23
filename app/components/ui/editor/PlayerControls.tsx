@@ -8,6 +8,7 @@ import { AspectRatioSelect } from "../AspectRatioSelect";
 import { formatTime } from "@/lib/video.utils";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP, type PlayerControlsProps } from "@/types/player-control.types";
 import { TooltipAction } from "@/components/ui/tooltip-action";
+import { ImageMaskEditor } from "./ImageMaskEditor";
 
 export function PlayerControls({
     isPlaying,
@@ -25,6 +26,9 @@ export function PlayerControls({
     onCustomAspectRatioChange,
     onOpenCropper,
     onZoomChange,
+    videoMaskConfig = { enabled: false },
+    onVideoMaskConfigChange,
+    videoPreviewImageUrl,
 }: PlayerControlsProps) {
     const t = useTranslations("playerControls");
 
@@ -164,6 +168,14 @@ export function PlayerControls({
                         {Math.round(zoomLevel)}×
                     </span>
                 </div>
+
+                {/* Select de Mask Image aqui */}
+                <div className="h-4 w-px bg-white/10" />
+                <ImageMaskEditor
+                    maskConfig={videoMaskConfig}
+                    onMaskConfigChange={onVideoMaskConfigChange}
+                    canvasImageUrl={videoPreviewImageUrl}
+                />
             </div>
 
             {/* Middle Section: Transport Controls */}
