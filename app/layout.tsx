@@ -1,7 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#050505' },
+  ],
+};
 
 export const metadata: Metadata = {
-  title: "openvid - Crea demos profesionales",
+  metadataBase: new URL('https://openvid.dev'),
+  title: {
+    default: "openvid - Crea demos profesionales y edita en segundos",
+    template: "%s | openvid",
+  },
   description: "Crea demos cinemáticas y edita videos en segundos. Añade zooms suaves, mockups, personaliza fondos y exporta demos profesionales.",
   applicationName: "openvid",
   keywords: [
@@ -54,20 +69,13 @@ export const metadata: Metadata = {
     description:
       "Añade zooms suaves, mockups, personaliza fondos y exporta demos profesionales sin editores complejos.",
     images: ["https://openvid.dev/images/metadata/preview-openvid.jpg"],
+    creator: "@cristianolivera",
+    site: "@openviddev",
   },
   other: {
     "msapplication-TileColor": "#1f2937",
     "format-detection": "telephone=no",
-    "mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
-};
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#050505",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

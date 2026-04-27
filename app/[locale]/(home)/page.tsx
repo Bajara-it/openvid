@@ -4,10 +4,74 @@ import EditorPreview from "@/app/components/ui/EditorPreview";
 import Hero from "@/app/components/ui/Hero";
 import { HeroScrollMask } from "@/app/components/ui/HeroScrollMask";
 import InteractiveRecordingSteps from "@/app/components/ui/RecordingSteps";
+import { StructuredData, generateWebAppSchema, generateOrganizationSchema } from "@/app/components/seo/StructuredData";
+import type { Metadata } from 'next';
 
-export default function Home() {
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const baseUrl = 'https://openvid.dev';
+
+  const metadata = {
+    es: {
+      title: 'Crea demos profesionales y edita videos en segundos',
+      description: 'Editor de video online gratuito con IA. Graba pantalla, añade zooms cinemáticos, mockups profesionales y exporta en HD. Sin marca de agua.',
+      keywords: ['editor de video', 'grabar pantalla', 'demos profesionales', 'zoom video', 'mockups', 'screen recorder', 'video editor online'],
+    },
+    en: {
+      title: 'Create Professional Demos and Edit Videos in Seconds',
+      description: 'Free AI-powered online video editor. Screen recorder, cinematic zooms, professional mockups, and HD export. No watermark.',
+      keywords: ['video editor', 'screen recorder', 'professional demos', 'video zoom', 'mockups', 'online video editor', 'free video editor'],
+    },
+  };
+
+  const { title, description, keywords } = metadata[locale as 'es' | 'en'] || metadata.es;
+
+  return {
+    title,
+    description,
+    keywords,
+    alternates: {
+      canonical: `${baseUrl}/${locale}`,
+      languages: {
+        es: `${baseUrl}/es`,
+        en: `${baseUrl}/en`,
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${baseUrl}/${locale}`,
+      images: [
+        {
+          url: `${baseUrl}/images/metadata/preview-openvid.jpg`,
+          width: 1200,
+          height: 630,
+          alt: 'openvid - Professional Video Editor',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [`${baseUrl}/images/metadata/preview-openvid.jpg`],
+    },
+  };
+}
+
+export default async function Home({ params }: Props) {
+  const { locale } = await params;
+
   return (
-    <div className="flex flex-col">
+    <>
+      <StructuredData data={generateWebAppSchema(locale as 'es' | 'en')} />
+      <StructuredData data={generateOrganizationSchema()} />
+      
+      <div className="flex flex-col">
       <div className="relative overflow-hidden bg-gradient-radial-primary w-full">
 
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-75 h-75 rounded-full bg-cyan-500/15 blur-[80px] pointer-events-none z-0" />
@@ -51,5 +115,6 @@ export default function Home() {
         </section>
       </div>
     </div>
+    </>
   );
 }

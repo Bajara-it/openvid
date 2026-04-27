@@ -125,6 +125,10 @@ export interface VideoCanvasProps {
     onCameraClick?: () => void;
     // Layers panel customization
     layersPanelToolbar?: React.ReactNode;
+    // Text placement tool (Figma-style T key)
+    textToolActive?: boolean;
+    onTextToolDeactivate?: () => void;
+    onAddElement?: (element: CanvasElement) => void;
 }
 
 export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {

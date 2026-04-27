@@ -2,6 +2,14 @@ import Footer from "@/app/components/common/Footer";
 import Header from "@/app/components/common/Header";
 import { AuthProvider } from "@/hooks/useAuth";
 import { RecordingProvider } from "@/hooks/RecordingContext";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
     return (

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { locales, type Locale } from '@/i18n';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Inter, Roboto, Poppins, Montserrat, DM_Sans } from "next/font/google";
+import type { Metadata } from 'next';
 import "../globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -11,6 +12,31 @@ const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"], varia
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-poppins", display: "swap" });
 const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-montserrat", display: "swap" });
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-dm-sans", display: "swap" });
+
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const baseUrl = 'https://openvid.dev';
+
+  const languages: Record<string, string> = {};
+  locales.forEach((loc) => {
+    languages[loc] = `${baseUrl}/${loc}`;
+  });
+
+  return {
+    alternates: {
+      canonical: `${baseUrl}/${locale}`,
+      languages,
+    },
+    openGraph: {
+      locale: locale === 'es' ? 'es_ES' : 'en_US',
+      alternateLocale: locale === 'es' ? ['en_US'] : ['es_ES'],
+    },
+  };
+}
 
 export default async function LocaleLayout({
   children,
