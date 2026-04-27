@@ -10,11 +10,14 @@ export interface CanvasElementBase {
     rotation: number;
     opacity: number;
     zIndex: number;
+    visible?: boolean;
+    locked?: boolean;
+    groupId?: string;
 }
 
 export interface SvgElement extends CanvasElementBase {
     type: "svg";
-    category: string; // e.g., "shapes", "arrows", "decorative"
+    category: string;
     svgId: string;
     color?: string;
 }

@@ -45,6 +45,8 @@ export interface VideoCanvasHandle {
     getExportCanvas: () => HTMLCanvasElement | null;
     drawFrame: () => Promise<void>;
     getPreviewContainer: () => HTMLDivElement | null;
+    clearAllSelection: () => { multiIds: string[]; videoSelected: boolean };
+    restoreSelectionState: (state: { multiIds: string[]; videoSelected: boolean }) => void;
 }
 
 export interface VideoThumbnail {
@@ -56,9 +58,7 @@ export interface VideoThumbnail {
 export type MediaType = "video" | "image";
 
 export interface VideoCanvasProps {
-    // Media type - determines if we're editing video or image
     mediaType?: MediaType;
-    // Image-specific props
     imageUrl?: string | null;
     imageRef?: React.RefObject<HTMLImageElement | null>;
     imageTransform?: {
@@ -88,8 +88,8 @@ export interface VideoCanvasProps {
     selectedWallpaper?: number;
     backgroundBlur?: number;
     selectedImageUrl?: string;
-    unsplashOverrideUrl?: string; 
-    backgroundColorCss?: string; 
+    unsplashOverrideUrl?: string;
+    backgroundColorCss?: string;
     onTimeUpdate: () => void;
     onLoadedMetadata: () => void;
     onEnded: () => void;
@@ -114,6 +114,7 @@ export interface VideoCanvasProps {
     selectedElementId?: string | null;
     onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
     onElementSelect?: (id: string | null) => void;
+    onElementDelete?: (id: string | string[]) => void;
     // Cursor overlay props
     cursorConfig?: CursorConfig;
     cursorData?: CursorRecordingData;
@@ -122,6 +123,8 @@ export interface VideoCanvasProps {
     cameraConfig?: import("./camera.types").CameraConfig | null;
     onCameraConfigChange?: (partial: Partial<import("./camera.types").CameraConfig>) => void;
     onCameraClick?: () => void;
+    // Layers panel customization
+    layersPanelToolbar?: React.ReactNode;
 }
 
 export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
