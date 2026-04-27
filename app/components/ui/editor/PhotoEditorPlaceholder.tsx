@@ -319,7 +319,7 @@ export function PhotoEditorPlaceholder({
 
     return (
         <div className={`flex flex-col bg-black border-t border-white/10 ${className}`}>
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-white/5">
+            <div className="h-13 shrink-0 border-t border-white/10 flex items-center justify-between px-5 bg-[#0D0D11]">
                 <div className="flex items-center gap-2 text-white/60 whitespace-nowrap">
                     <Icon icon="mdi:tune-vertical" width={16} />
                     <span className="text-xs font-semibold tracking-wide uppercase">
@@ -406,7 +406,7 @@ export function PhotoEditorPlaceholder({
                 </div>
             </div>
 
-            <div className="flex gap-3 px-5 py-4 overflow-x-auto custom-scrollbar mask-r-from-90% ">
+            <div className="flex gap-3 px-5 overflow-x-auto custom-scrollbar mask-r-from-90% ">
                 {allPreviews.map(renderPreviewCard)}
             </div>
         </div>

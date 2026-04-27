@@ -8,10 +8,12 @@ export function CanvasElementsLayer({
     canvasContainerRef,
     canvasElements,
     selectedElementId,
+    selectedElementIds,
     hoveredElementId,
     isDraggingElement,
     behindVideo,
     onElementSelect,
+    onMultiSelect,
     onElementUpdate,
     setHoveredElementId,
     setIsDraggingElement,
@@ -25,10 +27,12 @@ export function CanvasElementsLayer({
     canvasContainerRef?: React.RefObject<HTMLDivElement | null>;
     canvasElements: CanvasElement[];
     selectedElementId: string | null;
+    selectedElementIds?: string[];
     hoveredElementId: string | null;
     isDraggingElement: boolean;
     behindVideo: boolean;
     onElementSelect?: (id: string | null) => void;
+    onMultiSelect?: (ids: string[]) => void;
     onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
     setHoveredElementId: (id: string | null) => void;
     setIsDraggingElement: (dragging: boolean) => void;
@@ -42,7 +46,6 @@ export function CanvasElementsLayer({
     const layerRef = useRef<HTMLDivElement>(null);
     const [refSize, setRefSize] = useState(0);
 
-    // Estado local como fallback si no se pasan las props (capas que no son hit)
     const [localElementCorners, setLocalElementCorners] = useState<Record<string, Corner | null>>({});
     const elementCorners = elementCornersProp ?? localElementCorners;
     const setElementCorners = setElementCornersProp ?? setLocalElementCorners;
@@ -104,7 +107,7 @@ export function CanvasElementsLayer({
                 }
                 return a.zIndex - b.zIndex;
             }).map((element) => {
-                const isSelected = selectedElementId === element.id;
+                const isSelected = selectedElementId === element.id || (selectedElementIds?.includes(element.id) ?? false);
                 const isHovered = hoveredElementId === element.id;
                 const activeCorner: Corner | null = elementCorners[element.id] ?? null;
 
@@ -133,13 +136,26 @@ export function CanvasElementsLayer({
                 };
                 const handleMouseDown = (e: React.MouseEvent<HTMLElement>) => {
                     if (!onElementSelect) return;
+                    if (element.locked) return;
+                    if (e.button === 2) return;
                     if ((e.target as HTMLElement).closest('[data-element-rotation]')) {
                         e.stopPropagation();
                         return;
                     }
                     e.preventDefault();
                     e.stopPropagation();
-                    onElementSelect(element.id);
+                    const current = selectedElementIds ?? (selectedElementId ? [selectedElementId] : []);
+                    if (e.shiftKey && onMultiSelect) {
+                        const next = current.includes(element.id)
+                            ? current.filter(id => id !== element.id)
+                            : [...current, element.id];
+                        onMultiSelect(next);
+                    } else if (current.includes(element.id) && current.length > 1) {
+                        onElementSelect(element.id);
+                    } else {
+                        onElementSelect(element.id);
+                        if (onMultiSelect) onMultiSelect([element.id]);
+                    }
                     setIsDraggingElement(true);
                     elementDragStart.current = {
                         x: e.clientX,
@@ -180,6 +196,8 @@ export function CanvasElementsLayer({
                 ) : null;
 
                 if (hitTestOnly) {
+                    if (element.visible === false) return null;
+
                     const TOP_Z_INDEX = 2147483647;
 
                     const expandedHitArea = isSelected ? (
@@ -197,7 +215,7 @@ export function CanvasElementsLayer({
                             <div
                                 key={element.id}
                                 data-canvas-element
-                                className="absolute pointer-events-auto cursor-move select-none"
+                                className={`absolute pointer-events-auto select-none ${element.locked ? "cursor-not-allowed" : "cursor-move"}`}
                                 style={{
                                     left: `${element.x}%`,
                                     top: `${element.y}%`,
@@ -233,7 +251,7 @@ export function CanvasElementsLayer({
                         <div
                             key={element.id}
                             data-canvas-element
-                            className="absolute pointer-events-auto cursor-move"
+                            className={`absolute pointer-events-auto ${element.locked ? "cursor-not-allowed" : "cursor-move"}`}
                             style={{
                                 ...commonStyle,
                                 zIndex: isSelected ? TOP_Z_INDEX : element.zIndex,
@@ -251,6 +269,8 @@ export function CanvasElementsLayer({
                         </div>
                     );
                 }
+                if (element.visible === false) return null;
+
                 if (element.type === "svg") {
                     const SvgComponent = SVG_COMPONENTS[(element as SvgElement).svgId];
                     return (

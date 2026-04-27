@@ -220,7 +220,7 @@ export function ExportImageDropdown({
                                     }`}
                             >
                                 <div
-                                    className={`relative size-12 rounded-2xl flex items-center justify-center transition-all duration-300 border ${isSelected
+                                    className={`relative size-12 squircle-element flex items-center justify-center transition-all duration-300 border ${isSelected
                                             ? "border-white/30 scale-105"
                                             : "border-white/10 hover:border-white/20"
                                         }`}
@@ -255,7 +255,7 @@ export function ExportImageDropdown({
                 </div>
 
                 <div className="px-2 pb-2">
-                    <div className="bg-white/3 rounded-2xl border border-white/10 overflow-hidden max-h-64 overflow-y-auto custom-scrollbar">
+                    <div className="bg-white/3 squircle-element border border-white/10 overflow-hidden max-h-64 overflow-y-auto custom-scrollbar">
                         {qualityPresets.map((preset, i) => (
                             <button
                                 key={i}

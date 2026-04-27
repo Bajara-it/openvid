@@ -18,8 +18,6 @@ export function ElementsMenu({
     selectedElement,
     onUpdateElement,
     onDeleteElement,
-    onBringToFront,
-    onSendToBack
 }: ElementsMenuProps) {
     const t = useTranslations("elementsMenu");
 
@@ -59,12 +57,12 @@ export function ElementsMenu({
         startTransition(() => {
             if (selectedElement) {
                 if (selectedElement.type === "svg") {
-                    setShapeSize(selectedElement.width);
+                    setShapeSize(Math.round(selectedElement.width));
                     setShapeColor(selectedElement.color || "#FFFFFF");
                     setShapeOpacity(Math.round(selectedElement.opacity * 100));
                     setMode("elements");
                 } else if (selectedElement.type === "image") {
-                    setImageSize(selectedElement.width);
+                    setImageSize(Math.round(selectedElement.width));
                     setImageOpacity(Math.round(selectedElement.opacity * 100));
                     setMode("elements");
                 } else if (selectedElement.type === "text") {
@@ -367,11 +365,16 @@ export function ElementsMenu({
                                         <div className="p-3 grid grid-cols-8 gap-2 overflow-y-auto custom-scrollbar">
                                             {filteredImageItems.map((item) => (
                                                 <div key={`${item.category}-${item.id}`} className="w-full" style={{ paddingBottom: "100%", position: "relative" }}>
-                                                    <TooltipAction label={item.name}>
-                                                        <button title={item.name} onClick={() => handleAddImage(item, item.category)} className="absolute inset-0 bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element transition-all active:scale-90 overflow-hidden group">
-                                                            <ProgressiveImg src={getImagePreviewPath(item)} alt={item.name} className="w-full h-full object-contain group-hover:scale-110" />
-                                                        </button>
-                                                    </TooltipAction>
+                                                    <button
+                                                        onClick={() => handleAddImage(item, item.category)}
+                                                        className="absolute inset-0 bg-white/3 hover:bg-white/8 border border-white/[0.07] hover:border-white/20 squircle-element transition-all active:scale-90 overflow-hidden group"
+                                                    >
+                                                        <ProgressiveImg
+                                                            src={getImagePreviewPath(item)}
+                                                            alt={item.name}
+                                                            className="w-full h-full object-contain group-hover:scale-110"
+                                                        />
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -407,27 +410,6 @@ export function ElementsMenu({
                             <div className="space-y-3">
                                 <SliderControl icon="mdi:resize" label={t("properties.size")} value={selectedElement.type === "svg" ? shapeSize : imageSize} onChange={selectedElement.type === "svg" ? setShapeSize : setImageSize} min={5} max={200} />
                                 <SliderControl icon="mdi:opacity" label={t("properties.opacity")} value={selectedElement.type === "svg" ? shapeOpacity : imageOpacity} onChange={selectedElement.type === "svg" ? setShapeOpacity : setImageOpacity} />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">{t("sections.hierarchy")}</div>
-                                    <TooltipAction label={t("actions.delete")}>
-                                        <button onClick={() => onDeleteElement?.(selectedElement.id)} className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-md text-red-400 hover:text-red-300 transition-all active:scale-95">
-                                            <Icon icon="ph:trash-bold" width="14" />
-                                        </button>
-                                    </TooltipAction>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => onBringToFront?.(selectedElement.id)} className="flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/70 hover:text-white transition-all">
-                                        <Icon icon="ph:bring-to-front-bold" width="16" />
-                                        {t("actions.bringToFront")}
-                                    </button>
-                                    <button onClick={() => onSendToBack?.(selectedElement.id)} className="flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/70 hover:text-white transition-all">
-                                        <Icon icon="ph:send-to-back-bold" width="16" />
-                                        {t("actions.sendToBack")}
-                                    </button>
-                                </div>
                             </div>
                         </>
                     )}
@@ -525,29 +507,6 @@ export function ElementsMenu({
                         <Icon icon="ph:plus-bold" width="16" />
                         {t("text.addButton")}
                     </Button>
-
-                    {selectedElement && selectedElement.type === "text" && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">{t("sections.hierarchy")}</div>
-                                <TooltipAction label={t("actions.delete")}>
-                                    <button onClick={() => onDeleteElement?.(selectedElement.id)} className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-md text-red-400 hover:text-red-300 transition-all active:scale-95">
-                                        <Icon icon="ph:trash-bold" width="14" />
-                                    </button>
-                                </TooltipAction>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" className="text-xs" onClick={() => onBringToFront?.(selectedElement.id)}>
-                                    <Icon icon="ph:bring-to-front-bold" width="16" />
-                                    {t("actions.bringToFront")}
-                                </Button>
-                                <Button variant="outline" className="text-xs" onClick={() => onSendToBack?.(selectedElement.id)}>
-                                    <Icon icon="ph:send-to-back-bold" width="16" />
-                                    {t("actions.sendToBack")}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
