@@ -297,3 +297,25 @@ button {
   text-anchor: middle;
   dominant-baseline: middle;
 }
+
+@property --glow-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 50%;
+}
+
+@keyframes float-glow {
+  0%, 100% { --glow-x: 45%; filter: blur(100px) opacity(0.8); }
+  50% { --glow-x: 55%; filter: blur(130px) opacity(1); }
+}
+
+.pro-glow {
+  background: radial-gradient(
+    circle at var(--glow-x) 50%, 
+    rgba(6, 182, 212, 0.5) 0%,
+    rgba(6, 182, 212, 0.1) 40%,
+    rgba(6, 182, 212, 0) 70% 
+  );
+  animation: float-glow 10s ease-in-out infinite;
+  mix-blend-mode: screen; 
+}
