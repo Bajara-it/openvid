@@ -142,34 +142,47 @@ async function getVideoMetadata(file: File): Promise<{
 
 async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
     return new Promise((resolve) => {
+        const url = URL.createObjectURL(blob);
         const video = document.createElement("video");
-        video.preload = "metadata";
-        
-        video.onloadedmetadata = () => {
-            let hasAudio = false;
-            
-            const extVideo = video as ExtendedVideoElement;
+        video.muted = true;
+        video.preload = "auto";
+        let settled = false;
 
-            if (extVideo.audioTracks !== undefined && extVideo.audioTracks.length > 0) {
-                hasAudio = true;
-            } 
-            else if (extVideo.mozHasAudio !== undefined) {
-                hasAudio = extVideo.mozHasAudio;
-            } 
-            else {
-                hasAudio = true; 
+        const cleanup = (result: boolean) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            URL.revokeObjectURL(url);
+            video.src = "";
+            resolve(result);
+        };
+
+        const timeoutId = setTimeout(() => cleanup(false), 8000);
+
+        const checkAudio = (afterData: boolean) => {
+            const v = video as ExtendedVideoElement & { webkitAudioDecodedByteCount?: number };
+
+            if (afterData && typeof v.webkitAudioDecodedByteCount === "number") {
+                return cleanup(v.webkitAudioDecodedByteCount > 0);
             }
 
-            URL.revokeObjectURL(video.src);
-            resolve(hasAudio);
+            if (v.audioTracks !== undefined && v.audioTracks.length > 0) {
+                return cleanup(true);
+            }
+
+            if (v.mozHasAudio !== undefined) {
+                return cleanup(Boolean(v.mozHasAudio));
+            }
+
+            if (!afterData) return;
+
+            cleanup(false);
         };
 
-        video.onerror = () => {
-            URL.revokeObjectURL(video.src);
-            resolve(true); 
-        };
-
-        video.src = URL.createObjectURL(blob);
+        video.addEventListener("loadedmetadata", () => checkAudio(false));
+        video.addEventListener("loadeddata", () => checkAudio(true));
+        video.addEventListener("error", () => cleanup(false));
+        video.src = url;
     });
 }
 
@@ -226,7 +239,7 @@ export async function addVideoToLibrary(file: File): Promise<LibraryVideo> {
         console.warn("Failed to generate thumbnail:", e);
     }
     
-    let hasAudio = true;
+    let hasAudio = false;
     try {
         hasAudio = await detectVideoHasAudio(file);
     } catch (e) {
@@ -244,7 +257,7 @@ export async function addVideoToLibrary(file: File): Promise<LibraryVideo> {
         aspectRatio: metadata.aspectRatio,
         uploadedAt: Date.now(),
         thumbnailUrl,
-        hasAudio,
+        hasAudio: false,
         originalHasAudio: hasAudio,
     };
 
@@ -283,7 +296,7 @@ export async function addVideoToLibraryWithMetadata(options: AddVideoWithMetadat
             hasAudio = await detectVideoHasAudio(options.blob);
         } catch (e) {
             console.warn("Failed to detect audio:", e);
-            hasAudio = true;
+            hasAudio = false;
         }
     }
 
@@ -298,7 +311,7 @@ export async function addVideoToLibraryWithMetadata(options: AddVideoWithMetadat
         aspectRatio: "auto",
         uploadedAt: Date.now(),
         thumbnailUrl,
-        hasAudio,
+        hasAudio: false,
         originalHasAudio: hasAudio,
     };
 

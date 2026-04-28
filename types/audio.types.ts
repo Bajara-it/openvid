@@ -57,14 +57,10 @@ export const MAX_AUDIO_TRACKS = 5;
 export interface AudioMenuProps {
     audioTracks: AudioTrack[];
     uploadedAudios: UploadedAudio[];
-    muteOriginalAudio: boolean;
-    masterVolume: number;
     videoDuration: number;
     onAudioUpload: (file: File) => void;
     onUpdateAudioTrack: (trackId: string, updates: Partial<AudioTrack>) => void;
     onDeleteAudioTrack: (trackId: string) => void;
-    onToggleMuteOriginalAudio: () => void;
-    onMasterVolumeChange: (volume: number) => void;
 }
 
 export const MIN_FRAGMENT_DURATION = 0.1;

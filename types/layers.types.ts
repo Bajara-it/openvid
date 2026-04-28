@@ -1,9 +1,10 @@
 import { CanvasElement } from "./canvas-elements.types";
 
-export const TYPE_ICON: Record<CanvasElement["type"], string> = {
+export const TYPE_ICON: Record<CanvasElement["type"] | "video", string> = {
     image: "solar:gallery-bold",
     text:  "solar:text-bold",
     svg:   "mdi:svg",
+    video: "solar:videocamera-record-bold",
 };
 
 export interface LayersPanelProps {
@@ -22,6 +23,11 @@ export interface LayersPanelProps {
     onUngroup?: (ids: string[]) => void;
     onSetGroupId?: (id: string, groupId: string | undefined) => void;
     toolbar?: React.ReactNode;
+    // Video/image layer support
+    videoLayerVisible?: boolean;
+    onVideoLayerSelect?: () => void;
+    isVideoLayerSelected?: boolean;
+    mediaType?: "video" | "image";
 }
 
 export interface CtxMenuState { x: number; y: number; id: string }

@@ -75,7 +75,6 @@ export interface VideoCanvasProps {
     imageMaskConfig?: import("@/types/photo.types").ImageMaskConfig;
     videoMaskConfig?: import("@/types/photo.types").ImageMaskConfig;
     onVideoMaskConfigChange?: (config: import("@/types/photo.types").ImageMaskConfig) => void;
-    // Video-specific props
     videoRef: React.RefObject<HTMLVideoElement | null>;
     videoUrl: string | null;
     padding: number;
@@ -98,83 +97,77 @@ export interface VideoCanvasProps {
     getThumbnailForTime?: (time: number) => VideoThumbnail | null;
     zoomFragments?: ZoomFragment[];
     currentTime?: number;
-    // Mockup props
     mockupId?: string;
     mockupConfig?: import("./mockup.types").MockupConfig;
-    // Video upload props
     onVideoUpload?: (file: File) => void;
     onImageUpload?: (file: File) => void;
     onImageDrop?: (files: FileList | File[]) => void;
     isUploading?: boolean;
-    // Transform props
     videoTransform?: VideoTransform;
     onVideoTransformChange?: (transform: VideoTransform) => void;
-    // Canvas elements props
     canvasElements?: CanvasElement[];
     selectedElementId?: string | null;
     onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
     onElementSelect?: (id: string | null) => void;
     onElementDelete?: (id: string | string[]) => void;
-    // Cursor overlay props
     cursorConfig?: CursorConfig;
     cursorData?: CursorRecordingData;
-    // Camera overlay props
     cameraUrl?: string | null;
     cameraConfig?: import("./camera.types").CameraConfig | null;
     onCameraConfigChange?: (partial: Partial<import("./camera.types").CameraConfig>) => void;
     onCameraClick?: () => void;
-    // Layers panel customization
     layersPanelToolbar?: React.ReactNode;
-    // Text placement tool (Figma-style T key)
     textToolActive?: boolean;
     onTextToolDeactivate?: () => void;
     onAddElement?: (element: CanvasElement) => void;
 }
 
 export async function detectVideoHasAudio(blob: Blob): Promise<boolean> {
-    try {
+    return new Promise<boolean>((resolve) => {
         const url = URL.createObjectURL(blob);
+        const video = document.createElement("video");
+        video.muted = true;
+        video.preload = "auto";
+        let settled = false;
 
-        return new Promise<boolean>((resolve) => {
-            const audioCtx = new AudioContext();
-            const reader = new FileReader();
+        const cleanup = (result: boolean) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            URL.revokeObjectURL(url);
+            video.src = "";
+            resolve(result);
+        };
 
-            reader.onload = async (e) => {
-                try {
-                    const arrayBuffer = e.target?.result as ArrayBuffer;
-                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const timeoutId = setTimeout(() => cleanup(false), 8000);
 
-                    let hasSignal = false;
-                    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-                        const data = audioBuffer.getChannelData(ch);
-                        for (let i = 0; i < Math.min(data.length, 10000); i++) {
-                            if (Math.abs(data[i]) > 0.001) {
-                                hasSignal = true;
-                                break;
-                            }
-                        }
-                        if (hasSignal) break;
-                    }
-
-                    await audioCtx.close();
-                    URL.revokeObjectURL(url);
-                    resolve(hasSignal);
-                } catch {
-                    await audioCtx.close();
-                    URL.revokeObjectURL(url);
-                    resolve(false);
-                }
+        const checkAudio = (afterData: boolean) => {
+            const v = video as HTMLVideoElement & {
+                audioTracks?: { length: number };
+                mozHasAudio?: boolean;
+                webkitAudioDecodedByteCount?: number;
             };
 
-            reader.onerror = () => {
-                audioCtx.close();
-                URL.revokeObjectURL(url);
-                resolve(false);
-            };
+            if (afterData && typeof v.webkitAudioDecodedByteCount === "number") {
+                return cleanup(v.webkitAudioDecodedByteCount > 0);
+            }
 
-            reader.readAsArrayBuffer(blob);
-        });
-    } catch {
-        return true;
-    }
+            if (v.audioTracks !== undefined && v.audioTracks.length > 0) {
+                return cleanup(true);
+            }
+
+            if (v.mozHasAudio !== undefined) {
+                return cleanup(Boolean(v.mozHasAudio));
+            }
+
+            if (!afterData) return;
+
+            cleanup(false);
+        };
+
+        video.addEventListener("loadedmetadata", () => checkAudio(false));
+        video.addEventListener("loadeddata", () => checkAudio(true));
+        video.addEventListener("error", () => cleanup(false));
+        video.src = url;
+    });
 }
