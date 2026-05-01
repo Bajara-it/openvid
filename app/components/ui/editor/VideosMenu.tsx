@@ -6,14 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { TooltipAction } from "@/components/ui/tooltip-action";
 import {
-  type LibraryVideoInfo,
-  getLibraryVideoInfoList,
   deleteLibraryVideo,
   getLibraryVideo,
   updateVideoAudioState,
   formatFileSize,
   formatVideoDuration,
+  getLibraryVideoInfoList,
 } from "@/lib/videos-library";
+import { LibraryVideoInfo } from "@/types";
 
 interface VideosMenuProps {
   onAddToTrack?: (videoId: string, blob: Blob, duration: number) => void;
