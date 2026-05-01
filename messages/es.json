@@ -8,7 +8,8 @@
     "logout": "Cerrar sesión",
     "loggingOut": "Cerrando sesión...",
     "menu": "Menú",
-    "screen": "Grabar"
+    "screen": "Grabar",
+    "close": "Cerrar"
   },
   "footer": {
     "description": "Aplicación moderna para la <recording>grabación de pantalla</recording> y la <editing>edición de vídeo</editing>. Diseñada para la web. Sin instalaciones, sin esperas y directamente en tu navegador.",
@@ -269,6 +270,7 @@
     "backToHome": "Volver al inicio",
     "disclaimer": "Al continuar, aceptas nuestros <terms>Términos de Servicio</terms> y <privacy>Política de Privacidad</privacy>.",
     "providers": {
+      "groupLabel": "Opciones de inicio de sesión",
       "google": "Continuar con Google",
       "github": "Continuar con GitHub",
       "twitch": "Continuar con Twitch",
@@ -442,6 +444,7 @@
       "zoom": "Zoom",
       "camera": "Cámara",
       "cursor": "Cursor",
+      "toolbar": "Barra de herramientas",
       "soon": "Pronto"
     },
     "popovers": {
@@ -1037,7 +1040,8 @@
     "buttons": {
       "reset": "Restablecer",
       "apply": "Aplicar recorte"
-    }
+    },
+    "close": "Cerrar"
   },
   "timeline": {
     "noSpace": "Sin espacio"

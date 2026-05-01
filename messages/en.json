@@ -8,7 +8,8 @@
     "logout": "Sign out",
     "loggingOut": "Signing out...",
     "menu": "Menu",
-    "screen": "Record"
+    "screen": "Record",
+    "close": "Close"
   },
   "footer": {
     "description": "Modern application for <recording>screen recording</recording> and <editing>video editing</editing>. Designed for the web. No installations, no waiting, directly in your browser.",
@@ -276,6 +277,7 @@
       "google": "Continue with Google",
       "github": "Continue with GitHub",
       "twitch": "Continue with Twitch",
+      "groupLabel": "Sign in options",
       "loading": "Connecting..."
     },
     "errors": {
@@ -446,6 +448,7 @@
       "zoom": "Zoom",
       "camera": "Camera",
       "cursor": "Cursor",
+      "toolbar": "Tools toolbar",
       "soon": "Soon"
     },
     "popovers": {
@@ -1060,7 +1063,8 @@
     "buttons": {
       "reset": "Reset",
       "apply": "Apply crop"
-    }
+    },
+    "close": "Close"
   },
   "timeline": {
     "noSpace": "No space"
