@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -22,76 +21,76 @@ const floatImages = [
 ];
 
 export function HeroScrollMask() {
-  const t = useTranslations('demo');
+  const t = useTranslations("demo");
   const pinContainerRef = useRef<HTMLDivElement>(null);
   const brandRef = useRef<HTMLSpanElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const [featureIndex, setFeatureIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const features = t.raw('features') as string[];
+  const features = t.raw("features") as string[];
 
   useEffect(() => {
     if (!features?.length) return;
-    
     const interval = setInterval(() => {
       setIsTransitioning(true);
-      
       setTimeout(() => {
         setFeatureIndex((prev) => (prev + 1) % features.length);
         setIsTransitioning(false);
-      }, 400); 
-      
+      }, 400);
     }, 3000);
-    
     return () => clearInterval(interval);
   }, [features]);
 
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    mm.add({
-      isDesktop: "(min-width: 768px)",
-      isMobile: "(max-width: 767px)"
-    }, (context) => {
-      const conditions = context.conditions as { isMobile: boolean; isDesktop: boolean } | undefined;
-      const isMobile = !!conditions?.isMobile;
-
+    // Limitamos la ejecución de la animación solo a pantallas >= 640px (breakpoint 'sm')
+    mm.add("(min-width: 640px)", () => {
       const timeline = gsap.timeline({ defaults: { ease: "none" } });
 
       timeline.set(containerRef.current, { visibility: "visible" }, 2.5);
 
-      timeline.to(".floating-image", {
-        x: (i) => (i % 2 === 0 ? "-120vw" : "120vw"),
-        y: (i) => (i < floatImages.length / 2 ? "-120vh" : "120vh"),
-        scale: 2.5,
-        opacity: 0,
-        stagger: { each: 0.15, from: "center" },
-        duration: 3,
-        ease: "power3.inOut",
-      }, 0);
-
-      timeline.fromTo(
-        brandRef.current,
-        { scale: 1, yPercent: -60 },
+      timeline.to(
+        ".floating-image",
         {
-          yPercent: -50,
-          xPercent: isMobile ? 50 : 150,
-          scale: isMobile ? 300 : 150, 
-          duration: 5,
-          ease: "power2.inOut",
+          x: (i) => (i % 2 === 0 ? "-120vw" : "120vw"),
+          y: (i) => (i < floatImages.length / 2 ? "-120vh" : "120vh"),
+          scale: 2.5,
+          opacity: 0,
+          stagger: { each: 0.15, from: "center" },
+          duration: 3,
+          ease: "power3.inOut",
         },
-        2
-      )
-      .to(brandRef.current, { 
-        backgroundColor: "black", 
-        color: "white", 
-        mixBlendMode: "multiply", 
-        duration: 0 
-      }, 2.5)
-      .to(brandRef.current, { opacity: 0, duration: 0.5 }, 4.5);
+        0
+      );
+
+      timeline
+        .fromTo(
+          brandRef.current,
+          { scale: 1, yPercent: -60 },
+          {
+            yPercent: -50,
+            xPercent: 150,
+            scale: 150,
+            duration: 5,
+            ease: "power2.inOut",
+          },
+          2
+        )
+        .to(
+          brandRef.current,
+          {
+            backgroundColor: "black",
+            color: "white",
+            mixBlendMode: "multiply",
+            duration: 0,
+          },
+          2.5
+        )
+        .to(brandRef.current, { opacity: 0, duration: 0.5 }, 4.5);
 
       timeline.fromTo(
         videoRef.current,
@@ -123,66 +122,76 @@ export function HeroScrollMask() {
   return (
     <section
       ref={pinContainerRef}
-      className="relative z-0 h-[calc(100svh-80px)] overflow-hidden bg-gradient-radial-primary transparent"
+      className="relative z-0 h-auto sm:h-[calc(100svh-80px)] sm:overflow-hidden bg-gradient-radial-primary transparent"
     >
-      <div className="relative w-full h-svh overflow-hidden z-0 bg-transparent">
-        {floatImages.map((img, id) => (
-          <div
-            key={id}
-            className={`floating-image absolute squircle-element-camera overflow-hidden z-10 shadow-[-15px_-25px_60px_-30px_rgba(0,163,255,0.35)] border border-white/10 backdrop-blur-md will-change-transform ${img.pos} ${img.size} transition-all duration-700`}
-          >
-            <div className="relative w-full h-full bg-[#0a0a0a]">
-              <div className="absolute inset-0 bg-linear-to-tr from-white/5 to-transparent z-0" />
-              <img
-                src={img.src}
-                alt=""
-                className="w-full h-full block object-cover z-10 contrast-[1.1] brightness-[0.9] saturate-[1.2]"
-                aria-hidden="true"
-              />
-              <div
-                className="pointer-events-none absolute inset-0 z-20"
-                style={{
-                  background: 'radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.4) 100%)',
-                  mixBlendMode: 'overlay',
-                }}
-              />
-              <div className="pointer-events-none absolute inset-0 z-30 border-t border-white/20" />
-            </div>
-          </div>
-        ))}
-
-        <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center gap-6">
-          <div
-            ref={textContainerRef}
-            className="absolute top-2 right-2 sm:top-2 sm:right-6 md:top-14 md:right-8 z-40 pointer-events-none select-none opacity-0"
-          >
-            <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-xl md:rounded-2xl px-1 py-1 md:px-6 md:py-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-end min-w-45 sm:min-w-65 md:min-w-[320px]">
-              
-              <div className="h-2 md:h-6 w-full flex items-center justify-end overflow-hidden px-1">
-                <h2 
-                  className={`text-[10px] sm:text-xl md:text-2xl font-black text-white italic tracking-tighter drop-shadow-[0_8px_8px_rgba(0,0,0,0.5)] uppercase whitespace-nowrap transition-all duration-400 ease-in-out ${
-                    isTransitioning ? "opacity-0 translate-y-4 skew-y-6" : "opacity-100 translate-y-0 skew-y-0"
-                  }`}
-                >
-                  {features?.[featureIndex]}
-                </h2>
+      <div className="flex flex-col sm:block w-full">
+        <div className="absolute sm:relative top-0 left-0 w-full h-[100svh] sm:h-svh overflow-hidden z-0 bg-transparent pointer-events-none">
+          {floatImages.map((img, id) => (
+            <div
+              key={id}
+              className={`floating-image absolute squircle-element-camera overflow-hidden z-10 shadow-[-15px_-25px_60px_-30px_rgba(0,163,255,0.35)] border border-white/10 backdrop-blur-md will-change-transform ${img.pos} ${img.size} transition-all duration-700 pointer-events-auto`}
+            >
+              <div className="relative w-full h-full bg-[#0a0a0a]">
+                <div className="absolute inset-0 bg-linear-to-tr from-white/5 to-transparent z-0" />
+                <img
+                  src={img.src}
+                  alt=""
+                  className="w-full h-full block object-cover z-10 contrast-[1.1] brightness-[0.9] saturate-[1.2]"
+                  aria-hidden="true"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 z-20"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.4) 100%)",
+                    mixBlendMode: "overlay",
+                  }}
+                />
+                <div className="pointer-events-none absolute inset-0 z-30 border-t border-white/20" />
               </div>
-              
-              <div 
-                className={`h-px md:h-1 bg-linear-to-r from-transparent via-blue-500 to-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-500 origin-right ${
-                  isTransitioning ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
-                } w-full`} 
-              />
             </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 w-full flex flex-col sm:absolute sm:inset-0 pointer-events-none">
+          <div className="relative w-full h-0 sm:h-full flex justify-center items-center z-30">
+            <div
+              ref={textContainerRef}
+              className="hidden sm:flex absolute top-[8svh] sm:top-2 right-4 sm:right-6 md:top-14 md:right-8 z-40 opacity-100 sm:opacity-0 pointer-events-auto"
+            >
+              <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-xl md:rounded-2xl px-2 py-2 md:px-6 md:py-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-end min-w-45 sm:min-w-65 md:min-w-[320px]">
+                <div className="h-4 md:h-6 w-full flex items-center justify-end overflow-hidden px-1">
+                  <h2
+                    className={`text-[12px] sm:text-xl md:text-2xl font-black text-white italic tracking-tighter drop-shadow-[0_8px_8px_rgba(0,0,0,0.5)] uppercase whitespace-nowrap transition-all duration-400 ease-in-out ${
+                      isTransitioning
+                        ? "opacity-0 translate-y-4 skew-y-6"
+                        : "opacity-100 translate-y-0 skew-y-0"
+                    }`}
+                  >
+                    {features?.[featureIndex]}
+                  </h2>
+                </div>
+                <div
+                  className={`h-px md:h-1 bg-linear-to-r from-transparent via-blue-500 to-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-500 origin-right ${
+                    isTransitioning ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
+                  } w-full`}
+                />
+              </div>
+            </div>
+
+            <p className="hidden sm:block absolute bottom-10 z-30 text-white/80 font-semibold text-4xl">
+              <Icon icon="iconoir:mouse-scroll-wheel" aria-hidden="true" />
+            </p>
           </div>
 
-          <h2 className="relative w-full h-full flex justify-center items-center pointer-events-none">
+          <h2 className="relative w-full flex flex-col sm:block justify-center items-center pointer-events-none h-auto min-h-[100svh] sm:min-h-0 sm:h-full shrink-0">
+            
             <span
               ref={brandRef}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-full h-full flex justify-center items-center text-center bg-transparent mix-blend-screen pointer-events-none text-white"
+              className="absolute top-0 left-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-20 w-full h-[100svh] sm:h-full flex justify-center items-center text-center bg-transparent sm:mix-blend-screen pointer-events-none text-white"
             >
               <svg
-                className="w-[80vw] max-w-150 h-auto mask-b-from-30% mask-b-to-99%"
+                className="w-[80vw] max-w-150 h-auto sm:mask-b-from-30% sm:mask-b-to-99%"
                 viewBox="0 0 633 194"
                 fill="currentColor"
                 xmlns="http://www.w3.org/2000/svg"
@@ -201,7 +210,7 @@ export function HeroScrollMask() {
 
             <div
               ref={containerRef}
-              className="absolute inset-0 w-full h-full z-10 overflow-hidden flex flex-col justify-center items-center bg-black invisible"
+              className="relative sm:absolute sm:inset-0 w-full h-auto sm:h-full z-10 flex flex-col justify-center items-center sm:bg-black sm:invisible mt-[100svh] sm:mt-0 pb-16 sm:pb-0 pointer-events-auto"
             >
               <video
                 ref={videoRef}
@@ -209,18 +218,15 @@ export function HeroScrollMask() {
                 loop
                 muted
                 playsInline
-                className="w-full max-w-370 h-auto max-h-full object-contain"
-                aria-label={t('title')}
+                className="w-[90vw] sm:w-full max-w-370 rounded-xl sm:rounded-none shadow-[0_0_40px_rgba(0,163,255,0.15)] sm:shadow-none border border-white/10 sm:border-none h-auto max-h-[80svh] sm:max-h-full object-contain"
+                aria-label={t("title")}
               >
                 <source src="/images/pages/demo-scroll2.mp4" type="video/mp4" />
               </video>
-              <div className="absolute bottom-0 left-0 right-0 h-40 z-20 bg-linear-to-t from-[#0B0B0B] via-[#0B0B0B]/80 to-transparent pointer-events-none" />
+              <div className="hidden sm:block absolute bottom-0 left-0 right-0 h-40 z-20 bg-linear-to-t from-[#0B0B0B] via-[#0B0B0B]/80 to-transparent pointer-events-none" />
             </div>
-          </h2>
 
-          <p className="absolute bottom-10 z-30 text-white/80 font-semibold text-4xl">
-            <Icon icon="iconoir:mouse-scroll-wheel" aria-hidden="true" />
-          </p>
+          </h2>
         </div>
       </div>
     </section>
